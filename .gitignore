@@ -1,0 +1,33 @@
+# ── Data (never commit; large + patient imagery) ───────────────────────────
+Data/
+*.dcm
+
+# ── Model outputs / checkpoints / logs ─────────────────────────────────────
+outputs/checkpoints/
+outputs/logs/
+# outputs/figures/ is intentionally tracked — result figures belong in git
+*.pt
+*.pth
+*.ckpt
+*.onnx
+
+# ── Python ─────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# ── Virtual environments ───────────────────────────────────────────────────
+.venv/
+venv/
+env/
+
+# ── Experiment tracking ────────────────────────────────────────────────────
+wandb/
+runs/
+mlruns/
+
+# ── OS / editor cruft ──────────────────────────────────────────────────────
+.DS_Store
+.vscode/
+.idea/

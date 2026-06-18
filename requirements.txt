@@ -1,0 +1,24 @@
+# ThyroVision AI — Phase 1 (Baseline) dependencies
+# Python 3.11, PyTorch MPS backend (Apple Silicon, no CUDA).
+# Install:  .venv/bin/pip install -r requirements.txt
+
+# --- Deep learning core ---
+torch>=2.2
+torchvision>=0.17
+timm>=0.9.16            # pretrained ResNet-50 backbone
+
+# --- Numerics / imaging ---
+numpy>=1.26
+pillow>=10.0
+opencv-python>=4.9      # artifact cleaning / image ops
+albumentations>=1.4     # augmentation (train split only)
+
+# --- ML utilities / metrics ---
+scikit-learn>=1.4       # patient-level splits, sensitivity/specificity/AUC
+pandas>=2.2             # results tables / logging
+matplotlib>=3.8         # confusion matrices, ROC curves
+
+# --- Misc ---
+tqdm>=4.66              # progress bars
+
+# Phase 3 (Explainability) will add: pytorch-grad-cam

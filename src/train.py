@@ -74,19 +74,23 @@ def _class_weights(rows) -> torch.Tensor:
     return torch.tensor([n / (k * counts[c]) for c in (0, 1)], dtype=torch.float32)
 
 
-def fit(train_ds, val_ds, device, ckpt_path, log, *, tag="",
-        epochs=EPOCHS, patience=PATIENCE, history_csv=None, curve_png=None,
-        meta_extra=None):
+def fit(train_ds, val_ds, device, ckpt_path, log, *, tag="", backbone="resnet50",
+        image_size=IMAGE_SIZE, epochs=EPOCHS, patience=PATIENCE,
+        batch_size=BATCH_SIZE, num_workers=NUM_WORKERS,
+        history_csv=None, curve_png=None, meta_extra=None):
     """Train one model with early stopping. Returns (best_meta, best_epoch,
-    elapsed_sec, history). The best-val-AUC weights are saved to ckpt_path."""
-    train_ld = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True,
-                          num_workers=NUM_WORKERS, persistent_workers=NUM_WORKERS > 0)
-    val_ld = DataLoader(val_ds, batch_size=BATCH_SIZE, shuffle=False,
-                        num_workers=NUM_WORKERS, persistent_workers=NUM_WORKERS > 0)
+    elapsed_sec, history). The best-val-AUC weights are saved to ckpt_path.
+
+    batch_size / num_workers are tunable so large-resolution backbones (e.g.
+    EfficientNet-B3 @300px) can use a smaller batch to fit in unified memory."""
+    train_ld = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
+                          num_workers=num_workers, persistent_workers=num_workers > 0)
+    val_ld = DataLoader(val_ds, batch_size=batch_size, shuffle=False,
+                        num_workers=num_workers, persistent_workers=num_workers > 0)
 
     class_weights = _class_weights(train_ds.rows).to(device)
     criterion = nn.CrossEntropyLoss(weight=class_weights)
-    model = model_mod.build_resnet50(num_classes=2, pretrained=True).to(device)
+    model = model_mod.build_model(backbone, num_classes=2, pretrained=True).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
 
@@ -98,6 +102,8 @@ def fit(train_ds, val_ds, device, ckpt_path, log, *, tag="",
         tr_loss, tr_m = _run_epoch(model, train_ld, device, criterion, optimizer)
         va_loss, va_m = _run_epoch(model, val_ld, device, criterion)
         scheduler.step()
+        if device.type == "mps":
+            torch.mps.empty_cache()   # release cached MPS memory between epochs
         log.info(f"{pfx}epoch {epoch:02d} | train loss {tr_loss:.4f} AUC {tr_m['auc']:.4f} "
                  f"| val loss {va_loss:.4f} AUC {va_m['auc']:.4f} "
                  f"sens {va_m['sensitivity']:.3f} spec {va_m['specificity']:.3f}")
@@ -109,8 +115,8 @@ def fit(train_ds, val_ds, device, ckpt_path, log, *, tag="",
 
         if va_m["auc"] > best_auc:
             best_auc, best_epoch, no_improve = va_m["auc"], epoch, 0
-            best_meta = {"epoch": epoch, "val_metrics": va_m,
-                         "class_names": utils.CLASS_NAMES, "image_size": IMAGE_SIZE,
+            best_meta = {"epoch": epoch, "val_metrics": va_m, "backbone": backbone,
+                         "class_names": utils.CLASS_NAMES, "image_size": image_size,
                          "split_csv": str(utils.SPLIT_CSV), "device": str(device),
                          "seed": utils.SEED, **(meta_extra or {})}
             model_mod.save_checkpoint(model, ckpt_path, meta=best_meta)

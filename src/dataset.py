@@ -72,6 +72,19 @@ def load_split_manifest() -> pd.DataFrame:
     return build_split_manifest(force=False)
 
 
+def load_clean_manifest() -> pd.DataFrame:
+    """Load the de-contaminated manifest (image_id, label, split, group, keep).
+
+    Built by near_duplicates.build_clean_manifest(); has near-duplicate leakers
+    flagged keep=False and a `group` column for group-aware CV folds.
+    """
+    clean = utils.OUTPUTS / "tn5000_split_clean.csv"
+    if not clean.exists():
+        raise FileNotFoundError(
+            f"{clean} missing — run near_duplicates.build_clean_manifest() first")
+    return pd.read_csv(clean, dtype={"image_id": str})
+
+
 def class_distribution(df: pd.DataFrame) -> pd.DataFrame:
     """Per-split counts of benign/malignant, for the verification report."""
     tab = df.pivot_table(index="split", columns="label", aggfunc="size", fill_value=0)

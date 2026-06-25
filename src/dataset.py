@@ -109,20 +109,33 @@ def compute_class_weights(df: pd.DataFrame) -> torch.Tensor:
 
 
 # ── Transforms ─────────────────────────────────────────────────────────────
-def get_transforms(split: str, image_size: int = 224) -> A.Compose:
-    """albumentations pipeline. Augmentation is TRAIN-ONLY (rule 5)."""
+def get_transforms(split: str, image_size: int = 224, aug: str = "default") -> A.Compose:
+    """albumentations pipeline. Augmentation is TRAIN-ONLY (rule 5).
+
+    aug="default" = light (flip/rotate/brightness); aug="strong" = heavier set for the
+    EfficientNet-B3 recipe (random-resized-crop, bigger rotation, contrast, noise) — the
+    paper's biggest lever was augmentation. No vertical flip in either (anatomy)."""
     normalize = A.Normalize(mean=utils.IMAGENET_MEAN, std=utils.IMAGENET_STD)
-    if split == "train":
+    tail = [normalize, ToTensorV2()]
+    if split != "train":
+        return A.Compose([A.Resize(image_size, image_size), *tail])
+    if aug == "strong":
         return A.Compose([
-            A.Resize(image_size, image_size),
-            A.HorizontalFlip(p=0.5),                 # left-right is clinically safe
-            A.Rotate(limit=10, border_mode=cv2.BORDER_CONSTANT, p=0.5),
-            A.RandomBrightnessContrast(0.15, 0.15, p=0.3),
-            normalize,
-            ToTensorV2(),
+            A.RandomResizedCrop(size=(image_size, image_size), scale=(0.8, 1.0),
+                                ratio=(0.9, 1.1), p=1.0),
+            A.HorizontalFlip(p=0.5),
+            A.Rotate(limit=15, border_mode=cv2.BORDER_CONSTANT, p=0.6),
+            A.RandomBrightnessContrast(0.2, 0.2, p=0.5),
+            A.GaussNoise(p=0.2),
+            *tail,
         ])
-    # val / test: deterministic, no augmentation
-    return A.Compose([A.Resize(image_size, image_size), normalize, ToTensorV2()])
+    return A.Compose([
+        A.Resize(image_size, image_size),
+        A.HorizontalFlip(p=0.5),                 # left-right is clinically safe
+        A.Rotate(limit=10, border_mode=cv2.BORDER_CONSTANT, p=0.5),
+        A.RandomBrightnessContrast(0.15, 0.15, p=0.3),
+        *tail,
+    ])
 
 
 # ── Dataset ────────────────────────────────────────────────────────────────
@@ -135,7 +148,8 @@ class TN5000Dataset(Dataset):
     """
 
     def __init__(self, rows: pd.DataFrame, train_aug: bool,
-                 image_size: int = 224, do_calipers: bool = True):
+                 image_size: int = 224, do_calipers: bool = True,
+                 aug_strength: str = "default"):
         # ── Rule-1 guardrail: never let DDTI through this class. ──
         root = str(utils.TN5000_IMAGES)
         assert "TN5000" in root, f"images root is not TN5000: {root}"
@@ -143,7 +157,8 @@ class TN5000Dataset(Dataset):
 
         self.rows = rows.reset_index(drop=True)
         self.do_calipers = do_calipers
-        self.transform = get_transforms("train" if train_aug else "val", image_size)
+        self.transform = get_transforms("train" if train_aug else "val",
+                                        image_size, aug_strength)
 
     def __len__(self) -> int:
         return len(self.rows)
@@ -159,10 +174,12 @@ class TN5000Dataset(Dataset):
 
 
 def make_split_dataset(split: str, manifest: pd.DataFrame | None = None,
-                       image_size: int = 224, do_calipers: bool = True) -> TN5000Dataset:
+                       image_size: int = 224, do_calipers: bool = True,
+                       aug_strength: str = "default") -> TN5000Dataset:
     """Build a dataset for an official split ('train' / 'val' / 'test')."""
     if split not in SPLIT_FILES:
         raise ValueError(f"split must be one of {list(SPLIT_FILES)}, got {split!r}")
     df = manifest if manifest is not None else load_split_manifest()
     return TN5000Dataset(df[df.split == split], train_aug=(split == "train"),
-                         image_size=image_size, do_calipers=do_calipers)
+                         image_size=image_size, do_calipers=do_calipers,
+                         aug_strength=aug_strength)

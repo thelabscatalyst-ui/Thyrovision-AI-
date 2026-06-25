@@ -23,11 +23,22 @@ BACKBONES = {
 
 
 def build_model(name: str = "resnet50", num_classes: int = 2,
-                pretrained: bool = True) -> nn.Module:
-    """Any timm backbone with a fresh `num_classes` head. Output = `num_classes` logits."""
+                pretrained: bool = True, drop_rate: float = 0.0) -> nn.Module:
+    """Any timm backbone with a fresh `num_classes` head. Output = `num_classes` logits.
+
+    `drop_rate` sets the classifier dropout (used to regularise EfficientNet)."""
     if name not in BACKBONES:
         raise ValueError(f"unknown backbone {name!r}; choose from {list(BACKBONES)}")
-    return timm.create_model(name, pretrained=pretrained, num_classes=num_classes)
+    return timm.create_model(name, pretrained=pretrained, num_classes=num_classes,
+                             drop_rate=drop_rate)
+
+
+def set_backbone_trainable(model: nn.Module, trainable: bool) -> None:
+    """Freeze/unfreeze the backbone; the classifier head stays trainable either way."""
+    for p in model.parameters():
+        p.requires_grad = trainable
+    for p in model.get_classifier().parameters():
+        p.requires_grad = True
 
 
 def build_resnet50(num_classes: int = 2, pretrained: bool = True) -> nn.Module:

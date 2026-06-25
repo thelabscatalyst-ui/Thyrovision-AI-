@@ -147,6 +147,82 @@ def _save_curve(history: list[dict], path) -> None:
     fig.tight_layout(); fig.savefig(path, dpi=110); plt.close(fig)
 
 
+def fit_two_phase(train_ds, val_ds, device, ckpt_path, log, *, tag="",
+                  backbone="resnet50", image_size=IMAGE_SIZE, drop_rate=0.0,
+                  label_smoothing=0.0, head_epochs=6, head_lr=1e-3,
+                  ft_epochs=25, ft_lr=1e-4, patience=8, unfreeze="all",
+                  batch_size=BATCH_SIZE, num_workers=NUM_WORKERS,
+                  history_csv=None, curve_png=None, meta_extra=None):
+    """Two-phase fine-tuning (best practice): Phase 1 trains the head with the
+    backbone frozen; Phase 2 unfreezes the backbone and fine-tunes at a low LR with
+    cosine decay + early stopping. Tracks the best-val-AUC checkpoint across both
+    phases. Same return signature as `fit`."""
+    train_ld = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
+                          num_workers=num_workers, persistent_workers=num_workers > 0)
+    val_ld = DataLoader(val_ds, batch_size=batch_size, shuffle=False,
+                        num_workers=num_workers, persistent_workers=num_workers > 0)
+    cw = _class_weights(train_ds.rows).to(device)
+    criterion = nn.CrossEntropyLoss(weight=cw, label_smoothing=label_smoothing)
+    model = model_mod.build_model(backbone, num_classes=2, pretrained=True,
+                                  drop_rate=drop_rate).to(device)
+
+    history, t0 = [], time.time()
+    best_auc, best_epoch, best_meta, no_improve, gepoch = -1.0, -1, None, 0, 0
+    pfx = f"[{tag}] " if tag else ""
+
+    def _log_save(phase, tr_loss, tr_m, va_loss, va_m):
+        nonlocal best_auc, best_epoch, best_meta, no_improve, gepoch
+        gepoch += 1
+        if device.type == "mps":
+            torch.mps.empty_cache()
+        log.info(f"{pfx}P{phase} epoch {gepoch:02d} | train loss {tr_loss:.4f} "
+                 f"AUC {tr_m['auc']:.4f} | val loss {va_loss:.4f} AUC {va_m['auc']:.4f} "
+                 f"sens {va_m['sensitivity']:.3f} spec {va_m['specificity']:.3f}")
+        history.append({"epoch": gepoch, "phase": phase, "train_loss": tr_loss,
+                        "train_auc": tr_m["auc"], "val_loss": va_loss, "val_auc": va_m["auc"],
+                        "val_accuracy": va_m["accuracy"], "val_sensitivity": va_m["sensitivity"],
+                        "val_specificity": va_m["specificity"]})
+        improved = va_m["auc"] > best_auc
+        if improved:
+            best_auc, best_epoch, no_improve = va_m["auc"], gepoch, 0
+            best_meta = {"epoch": gepoch, "phase": phase, "val_metrics": va_m,
+                         "backbone": backbone, "class_names": utils.CLASS_NAMES,
+                         "image_size": image_size, "split_csv": str(utils.SPLIT_CSV),
+                         "device": str(device), "seed": utils.SEED, **(meta_extra or {})}
+            model_mod.save_checkpoint(model, ckpt_path, meta=best_meta)
+        return improved
+
+    # ── Phase 1: head only (backbone frozen) ──
+    model_mod.set_backbone_trainable(model, False)
+    opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad],
+                            lr=head_lr, weight_decay=WEIGHT_DECAY)
+    for _ in range(head_epochs):
+        tr_loss, tr_m = _run_epoch(model, train_ld, device, criterion, opt)
+        va_loss, va_m = _run_epoch(model, val_ld, device, criterion)
+        _log_save(1, tr_loss, tr_m, va_loss, va_m)
+
+    # ── Phase 2: unfreeze backbone, fine-tune at low LR with cosine + early stop ──
+    model_mod.set_backbone_trainable(model, True)  # ("all" — top-blocks-only not needed; low LR guards)
+    opt = torch.optim.AdamW(model.parameters(), lr=ft_lr, weight_decay=WEIGHT_DECAY)
+    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=ft_epochs)
+    for _ in range(ft_epochs):
+        tr_loss, tr_m = _run_epoch(model, train_ld, device, criterion, opt)
+        va_loss, va_m = _run_epoch(model, val_ld, device, criterion)
+        sched.step()
+        if not _log_save(2, tr_loss, tr_m, va_loss, va_m):
+            no_improve += 1
+            if no_improve >= patience:
+                log.info(f"{pfx}early stopping (no val-AUC gain for {patience})")
+                break
+
+    elapsed = time.time() - t0
+    if history_csv is not None:
+        pd.DataFrame(history).to_csv(history_csv, index=False)
+    if curve_png is not None:
+        _save_curve(history, curve_png)
+    return best_meta, best_epoch, elapsed, history
+
+
 def main():
     utils.set_seed()
     utils.ensure_output_dirs()

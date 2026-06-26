@@ -65,3 +65,91 @@ Full map in `Research/Extras/Project_Context.md` §5.
 ## Sanity floor
 A plain ResNet-50 on TN5000 should land near 85% accuracy (literature baseline).
 Far below that means the pipeline is broken before the idea is being tested.
+
+## Compute / infra
+Train on the Mac (Apple M5, MPS — no CUDA). **Long jobs must run in the user's own
+Terminal under `caffeinate -dimsu` with the lid open** — Claude-launched background
+tasks get reaped, and lid-close defeats caffeinate. Keep jobs **resumable**
+(per-unit result JSON). EfficientNet-B3 @300 uses **batch 16** (batch 32 OOMs the
+16 GB unified memory). Pretrained weights are cached, so training needs no internet.
+Python 3.11 venv at `.venv/`. See memory: long-jobs-laptop-sleep.
+
+---
+
+# REFERENCE: Journey & Findings (Phase 1)
+
+## What we did (step by step)
+1. Built the TN5000 pipeline: load → clean burned-in artifacts (scanner text top-left,
+   calipers, bottom-right marker) → official 70/10/20 split frozen to
+   `outputs/tn5000_split.csv`.
+2. First baseline (ResNet-50, simple recipe) + 5-fold CV → validated the pipeline.
+3. Found duplicate-image leakage in TN5000 (data-quality finding).
+4. Ran a fair backbone bake-off (ResNet-18/50, EfficientNet-B0/B3, one recipe) →
+   EfficientNet was under-tuned by that recipe.
+5. Built **two-phase fine-tuning** + re-ran ResNet-50/18 and a 3-config B3 search →
+   **committed EfficientNet-B3**.
+6. Honest reporting: threshold tuning, AUC-vs-accuracy, class weighting for imbalance;
+   **dropped ensembling** (incompatible with the single-backbone "+CBAM" comparison).
+
+## Committed baseline — EfficientNet-B3 (TN5000 official split; single split, CV pending)
+Recipe: two-phase fine-tune (freeze head 6 ep @1e-3 → unfreeze @1e-4 cosine, early-stop),
+**300px, batch 16, dropout 0.4, label-smoothing 0.1, class-weighted loss**, light aug.
+
+| Operating point | Acc | Sens | Spec | Precision | F1 | AUC |
+|-----------------|----:|-----:|-----:|----------:|---:|----:|
+| max-accuracy (thr 0.43) | 0.871 | 0.895 | 0.807 | 0.926 | 0.910 | 0.918 |
+| balanced / Youden (thr 0.50) | 0.855 | 0.867 | 0.822 | 0.930 | 0.897 | 0.918 |
+
+vs paper's plain EfficientNet-B3 (87.1% / AUC 0.89): **we match accuracy, beat AUC, no GAN.**
+
+## Key findings (⭐ = citable)
+- ⭐ **TN5000 has no patient-ID field** → its official split is image-level (can't prove
+  patient separation). Documented as a limitation.
+- ⭐ **TN5000's official split contains 245 byte-identical duplicate images (119 groups);
+  ~44 duplicate pairs cross train↔test (~4.4% test leakage).** MD5-verified (no model,
+  no threshold). Not mentioned in the TN5000 or Medicina papers; one MDPI reproducibility
+  paper (Electronics 15/1/151) mentions investigating TN5000 leakage — read it in full
+  before any novelty claim. Reproduce: `.venv/bin/python -m src.verify_duplicates`.
+- ⭐ **Our plain ResNet-50 (85.2% CV) reproduces the paper's ResNet-50 (85.1%)** →
+  independent pipeline validation.
+- ⭐ **Tuned EfficientNet-B3 matches the paper's plain B3 on accuracy and beats its AUC,
+  without a GAN.**
+- ⭐ **EfficientNet is recipe-sensitive** — a ResNet-friendly recipe under-tunes it
+  (B0 overfit, specificity collapsed); fixed by the two-phase recipe.
+- ⭐ **Medicina paper (Bahmane 2025) inconsistencies:** plain B3 reported at 87.1% AND
+  89.7%; training time 42 AND 12 min; split stated 70/20/10 vs 70/10/20; "external
+  validation" on an uncited **THYROID-DATASET-2022 (NOT DDTI)**; SE-only attention never
+  compared; Grad-CAM reported not faithfulness-checked; biggest lever was a GAN (G-RAN,
+  +6.23%).
+- ⭐ **Attention is task-specific** (Paper 2: in a YOLOv8 detector, CPCA beat CBAM) →
+  attention choice must be *tested* (baseline / +SE / +CBAM), not assumed.
+
+## Key decisions & rationale
+- **Backbone = EfficientNet-B3:** mentor-confirmed + paper-aligned (their backbone) +
+  edges ResNet-18 on AUC/accuracy/sensitivity at sensible thresholds.
+- **Imbalance (71% malignant) → class weighting** (valid, often-better alternative to
+  oversampling/GAN). Oversampling/focal-loss are easy to A/B if wanted.
+- **AUC is the honest headline** (threshold-free); always report sens/spec too; choose
+  the operating threshold by **clinical sensitivity**, not raw accuracy.
+- **No G-RAN GAN** (out of scope; reached paper accuracy without it). **No ensembling.**
+
+## Detailed docs
+| Topic | File |
+|-------|------|
+| Step-by-step journey + ⭐ findings | `Research/Finding_Diary.md` |
+| Full baseline journey + all tables | `Research/Baseline_Journey_And_Results.md` |
+| Duplicate-leakage finding (+ reproduce) | `Research/TN5000_Duplicate_Finding.md` |
+| Named limitations (ours + theirs) | `Research/Limitations.md` |
+| Paper-log deep dive (papers 2/4/6) | `Research/Paper_Analysis_2_4_6.md` |
+| Backbone bake-off | `Research/Backbone_Bakeoff_Findings.md` |
+| Committed B3 confusion matrix | `outputs/figures/FINAL_b3_confusion_matrix.png` |
+| All tonight runs' numbers / probabilities | `outputs/logs/csv/tonight_summary.csv`, `outputs/tonight_probs.npz` |
+
+## Open threads for next session
+1. **Clarify the mentor's YOLOv8 + MobileNetV4 detection direction:** add a detection
+   track vs replace classification? does YOLOv8 detect+classify or detect→crop→B3
+   classifies? where does CBAM go? which limitations does it target (localization,
+   compute)? — don't build YOLOv8 machinery until pinned down.
+2. **Confirm EfficientNet-B3 with 5-fold CV** (final error-barred number).
+3. **Phase 2 (Leg A): EfficientNet-B3 vs +SE vs +CBAM** (consider +CPCA), identical
+   otherwise — the controlled attention comparison that is the core contribution.

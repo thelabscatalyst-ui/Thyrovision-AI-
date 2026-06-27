@@ -20,17 +20,24 @@ GPU/CUDA basics, etc.) in plain English as you introduce them, rather than
 assuming familiarity. Plan before you build: for any new stage, lay out the plan
 and the folder/file changes, and wait for me to confirm before writing code.
 
-## Current phase: Phase 2 — Attention (Leg A)
-**Phase 1 baseline = DONE & signed off (mentor-confirmed).** Committed backbone:
-**EfficientNet-B3** (two-phase fine-tune, 300px). Result: **acc 0.871 / sensitivity
-0.895 / specificity 0.807 / AUC 0.918** (single split; matches the paper's plain B3
-on accuracy, beats its AUC, no GAN). Pending: confirm with 5-fold CV.
+## Current phase: Phase 2 — Attention comparison (Leg A)
+**Phase 1 baseline = DONE & signed off.** Committed backbone: **EfficientNet-B3**
+(two-phase fine-tune, 300px). Result: acc 0.871 / sens 0.895 / spec 0.807 / AUC 0.918
+(single split; matches the paper's plain B3 on accuracy, beats its AUC, no GAN). CV pending.
 
-Phase 2 goal: test attention — **EfficientNet-B3 (baseline) vs +SE vs +CBAM**,
-identical otherwise. (Mentor also raised a detection track — YOLOv8 + MobileNetV4 +
-CBAM — to be scoped/clarified; see Finding_Diary / latest session.)
-Full journey + numbers: `Research/Baseline_Journey_And_Results.md`,
-`Research/Finding_Diary.md`.
+**Mentor-confirmed sequencing: (1) attention-mechanism comparison FIRST, (2) detection
+module LATER.**
+- **Phase 2 (NOW) — attention comparison:** add each mechanism identically to the B3
+  backbone and compare: **baseline (none) vs +SE vs +CBAM vs +CPCA**. Same recipe/split;
+  this controlled comparison is the core contribution (fixes the paper's "SE never
+  compared" gap). **Note:** EfficientNet-B3 has SE *natively*, so each mechanism is added
+  as an **external module after the backbone** for a fair like-for-like comparison.
+- **Phase 3 (LATER) — detection:** YOLOv8 + **MobileNetV4** backbone (+ attention) to
+  localize nodules / cut compute. Scope only after Phase 2 — **do not build YOLO
+  machinery yet.**
+
+Plan: `Research/Phase2_Plan.md`. Journey + numbers:
+`Research/Baseline_Journey_And_Results.md`, `Research/Finding_Diary.md`.
 
 ## Non-negotiable rules
 
@@ -145,11 +152,15 @@ vs paper's plain EfficientNet-B3 (87.1% / AUC 0.89): **we match accuracy, beat A
 | Committed B3 confusion matrix | `outputs/figures/FINAL_b3_confusion_matrix.png` |
 | All tonight runs' numbers / probabilities | `outputs/logs/csv/tonight_summary.csv`, `outputs/tonight_probs.npz` |
 
-## Open threads for next session
-1. **Clarify the mentor's YOLOv8 + MobileNetV4 detection direction:** add a detection
-   track vs replace classification? does YOLOv8 detect+classify or detect→crop→B3
-   classifies? where does CBAM go? which limitations does it target (localization,
-   compute)? — don't build YOLOv8 machinery until pinned down.
-2. **Confirm EfficientNet-B3 with 5-fold CV** (final error-barred number).
-3. **Phase 2 (Leg A): EfficientNet-B3 vs +SE vs +CBAM** (consider +CPCA), identical
-   otherwise — the controlled attention comparison that is the core contribution.
+## Open threads
+1. **Phase 2 (NOW): attention comparison** — B3 vs +SE vs +CBAM vs +CPCA, each added as an
+   external module after the backbone, identical recipe/split. The core contribution
+   (fixes the paper's "SE never compared" gap). Plan in `Research/Phase2_Plan.md`.
+2. **Confirm EfficientNet-B3 with 5-fold CV** (final error-barred baseline number) — can
+   run alongside / before the attention arms.
+3. **Phase 3 (LATER): detection** — YOLOv8 + MobileNetV4 backbone (+ attention) to localize
+   nodules / cut compute. Mentor-confirmed this comes *after* the attention comparison;
+   don't build YOLO machinery yet.
+4. **Open data question (user-flagged):** the duplicate finding's "adjacent-photo" pattern
+   — are the byte-identical duplicates consecutive frames / adjacent image-IDs? Investigate
+   before any strong novelty claim. See `Research/TN5000_Duplicate_Finding.md` (§Finding).

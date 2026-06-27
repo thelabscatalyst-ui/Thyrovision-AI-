@@ -7,7 +7,7 @@ Confirms the finding three independent ways:
 
 Then cross-tabulates duplicate pairs against TN5000's official train/val/test split
 to count the leakage (duplicate pairs that straddle the test boundary), and writes
-every duplicate group to outputs/tn5000_duplicates.csv.
+every duplicate group to outputs/csv/tn5000_duplicates.csv.
 
 The MD5 check uses no model and no threshold, so the result is not a judgement call.
 
@@ -25,7 +25,7 @@ from PIL import Image
 from . import dataset, utils
 
 DHASH_SIZE = 8
-DUPES_CSV = utils.OUTPUTS / "tn5000_duplicates.csv"
+DUPES_CSV = utils.CSV_DIR / "tn5000_duplicates.csv"
 
 
 def _dhash(img: Image.Image, size: int = DHASH_SIZE) -> np.ndarray:

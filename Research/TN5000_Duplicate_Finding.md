@@ -34,6 +34,9 @@ A random image-level split with duplicates present inevitably scatters identical
 across train/val/test → leakage. There is no patient-ID field to enable a patient-level
 split, so the duplicates cannot be grouped by patient from the metadata.
 
+## Finding
+Most important finding which is still making me doubtful that whether this anomaly is correct or not is *Duplicates are found in adjacent photos* so it is still fishy. 
+
 ## Impact
 - Any same-dataset TN5000 result on the official split is **mildly inflated** (~4.4% of
   the test set is leaked). Effect size is small (estimated <1% accuracy; the de-dup

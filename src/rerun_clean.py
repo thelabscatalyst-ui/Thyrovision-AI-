@@ -30,9 +30,9 @@ from .metrics import compute_metrics, format_metrics
 from .train import IMAGE_SIZE, fit
 
 SINGLE_CKPT = utils.CHECKPOINTS_DIR / "resnet50_baseline_clean.pt"
-SINGLE_RESULT = utils.LOGS_DIR / "baseline_clean_single_result.json"
-CV_CSV = utils.LOGS_DIR / "cv_clean_results.csv"
-CV_SUMMARY_CSV = utils.LOGS_DIR / "cv_clean_summary.csv"
+SINGLE_RESULT = utils.JSON_DIR / "baseline_clean_single_result.json"
+CV_CSV = utils.CSV_DIR / "cv_clean_results.csv"
+CV_SUMMARY_CSV = utils.CSV_DIR / "cv_clean_summary.csv"
 
 
 def _test_loader(kept):
@@ -51,7 +51,7 @@ def run_single(kept, device, log):
     log.info(f"[single] clean train {len(tr)}, val {len(va)}")
     best_meta, best_epoch, elapsed, _ = fit(
         tr, va, device, SINGLE_CKPT, log, tag="clean-single",
-        history_csv=utils.LOGS_DIR / "baseline_clean_history.csv",
+        history_csv=utils.CSV_DIR / "baseline_clean_history.csv",
         curve_png=utils.FIGURES_DIR / "baseline_clean_training_curve.png")
     model, _ = model_mod.load_checkpoint(SINGLE_CKPT, device)
     y, p = _infer(model, _test_loader(kept), device)
@@ -72,7 +72,7 @@ def run_cv(kept, device, log):
 
     for fold, (tr_idx, va_idx) in enumerate(
             sgkf.split(tv.image_id, tv.label, groups=tv.group), 1):
-        result_path = utils.LOGS_DIR / f"cv_clean_fold{fold}_result.json"
+        result_path = utils.JSON_DIR / f"cv_clean_fold{fold}_result.json"
         ckpt = utils.CHECKPOINTS_DIR / f"resnet50_cv_clean_fold{fold}.pt"
         if result_path.exists():
             r = json.loads(result_path.read_text())
@@ -88,7 +88,7 @@ def run_cv(kept, device, log):
             log.info(f"--- clean CV fold {fold}/{N_FOLDS}: train {len(tr_ds)}, val {len(va_ds)} ---")
             best_meta, best_epoch, elapsed, _ = fit(
                 tr_ds, va_ds, device, ckpt, log, tag=f"cv-fold{fold}",
-                history_csv=utils.LOGS_DIR / f"cv_clean_fold{fold}_history.csv",
+                history_csv=utils.CSV_DIR / f"cv_clean_fold{fold}_history.csv",
                 meta_extra={"fold": fold})
             val_m = best_meta["val_metrics"]
             m, _ = model_mod.load_checkpoint(ckpt, device)
@@ -113,14 +113,14 @@ def run_cv(kept, device, log):
 
 def _compare(log):
     """Print original-vs-clean side by side."""
-    old_single = json.loads((utils.LOGS_DIR / "baseline_test_metrics.json").read_text())
+    old_single = json.loads((utils.JSON_DIR / "baseline_test_metrics.json").read_text())
     new_single = json.loads(SINGLE_RESULT.read_text())["test_metrics"]
     print("\n=== Single-split TEST: original vs de-contaminated ===")
     for k in METRIC_KEYS:
         print(f"  {k:12s}: {old_single[k]:.4f}  ->  {new_single[k]:.4f}  "
               f"({new_single[k]-old_single[k]:+.4f})")
 
-    old_cv = pd.read_csv(utils.LOGS_DIR / "cv_summary.csv")
+    old_cv = pd.read_csv(utils.CSV_DIR / "cv_summary.csv")
     new_cv = pd.read_csv(CV_SUMMARY_CSV)
     print("\n=== 5-fold CV TEST (mean ± SD): original vs de-contaminated ===")
     for k in METRIC_KEYS:

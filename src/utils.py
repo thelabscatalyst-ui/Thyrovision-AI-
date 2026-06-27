@@ -29,12 +29,16 @@ TN5000_IMAGESETS = TN5000_ROOT / "ImageSets" / "Main"
 # DDTI is QUARANTINED in Phase 1 — defined here only so guardrails can detect it.
 DDTI_ROOT = DATA_ROOT / "DDTI Dataset"
 
-# Outputs
+# Outputs. Tracked in git: csv/ (frozen split + result tables) and figures/.
+# Ignored: checkpoints/ (large weights) and logs/ (run logs + json resume-markers).
 OUTPUTS = PROJECT_ROOT / "outputs"
 CHECKPOINTS_DIR = OUTPUTS / "checkpoints"
 FIGURES_DIR = OUTPUTS / "figures"
 LOGS_DIR = OUTPUTS / "logs"
-SPLIT_CSV = OUTPUTS / "tn5000_split.csv"
+CSV_DIR = OUTPUTS / "csv"             # frozen split + result/history/summary CSVs (tracked)
+JSON_DIR = LOGS_DIR / "json"         # per-run result JSONs + metrics (ignored)
+LOG_DIR = LOGS_DIR / "logs_files"    # .log / .txt run logs (ignored)
+SPLIT_CSV = CSV_DIR / "tn5000_split.csv"
 
 # Class convention: 0 = benign, 1 = malignant (= positive class for sensitivity).
 CLASS_NAMES = ("benign", "malignant")
@@ -71,7 +75,7 @@ def get_device() -> torch.device:
 
 def ensure_output_dirs() -> None:
     """Create the outputs/ subfolders if they don't already exist."""
-    for d in (CHECKPOINTS_DIR, FIGURES_DIR, LOGS_DIR):
+    for d in (CHECKPOINTS_DIR, FIGURES_DIR, CSV_DIR, JSON_DIR, LOG_DIR):
         d.mkdir(parents=True, exist_ok=True)
 
 
@@ -89,7 +93,7 @@ def get_logger(name: str, log_file: str | None = None) -> logging.Logger:
 
     if log_file is not None:
         ensure_output_dirs()
-        fh = logging.FileHandler(LOGS_DIR / log_file)
+        fh = logging.FileHandler(LOG_DIR / log_file)
         fh.setFormatter(fmt)
         logger.addHandler(fh)
 

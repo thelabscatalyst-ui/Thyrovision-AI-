@@ -1,4 +1,4 @@
-"""Fine-tune the ResNet-50 baseline on the TN5000 train split.
+"""Shared training engine for every backbone / attention arm on the TN5000 splits.
 
 What happens here (plain English)
 ---------------------------------
@@ -10,8 +10,12 @@ What happens here (plain English)
 * Loss is class-weighted so the 71/29 malignant/benign imbalance doesn't let the
   model lazily favour the majority class.
 
-The core training routine lives in `fit()` so the 5-fold CV script reuses the
-EXACT same logic (a fairness guarantee — baseline and CV differ only in data).
+Two routines, so every experiment reuses the EXACT same logic (fairness — runs
+differ only in data / backbone / attention, not in the training loop):
+  * `fit()`            — single-phase fine-tune (the original ResNet baseline / CV).
+  * `fit_two_phase()`  — freeze-head then unfreeze-backbone recipe used for the
+    committed EfficientNet-B3 and every Phase-2 attention arm (`attention=` selects
+    the external module; 'none' = plain backbone).
 
 Run:  PYTORCH_ENABLE_MPS_FALLBACK=1 .venv/bin/python -m src.train
 """
@@ -40,7 +44,7 @@ WEIGHT_DECAY = 1e-4
 NUM_WORKERS = 4
 IMAGE_SIZE = 224
 CKPT_PATH = utils.CHECKPOINTS_DIR / "resnet50_baseline.pt"
-HISTORY_CSV = utils.LOGS_DIR / "baseline_history.csv"
+HISTORY_CSV = utils.CSV_DIR / "baseline_history.csv"
 CURVE_PNG = utils.FIGURES_DIR / "baseline_training_curve.png"
 
 
@@ -148,23 +152,27 @@ def _save_curve(history: list[dict], path) -> None:
 
 
 def fit_two_phase(train_ds, val_ds, device, ckpt_path, log, *, tag="",
-                  backbone="resnet50", image_size=IMAGE_SIZE, drop_rate=0.0,
-                  label_smoothing=0.0, head_epochs=6, head_lr=1e-3,
+                  backbone="resnet50", attention="none", image_size=IMAGE_SIZE,
+                  drop_rate=0.0, label_smoothing=0.0, head_epochs=6, head_lr=1e-3,
                   ft_epochs=25, ft_lr=1e-4, patience=8, unfreeze="all",
                   batch_size=BATCH_SIZE, num_workers=NUM_WORKERS,
                   history_csv=None, curve_png=None, meta_extra=None):
     """Two-phase fine-tuning (best practice): Phase 1 trains the head with the
     backbone frozen; Phase 2 unfreezes the backbone and fine-tunes at a low LR with
     cosine decay + early stopping. Tracks the best-val-AUC checkpoint across both
-    phases. Same return signature as `fit`."""
+    phases. Same return signature as `fit`.
+
+    `attention` ('none'/'se'/'cbam'/'cpca') selects the Phase-2 external attention
+    module wrapped on the backbone; 'none' is the plain backbone baseline. In Phase 1
+    the attention module trains alongside the head (both are freshly initialised)."""
     train_ld = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
                           num_workers=num_workers, persistent_workers=num_workers > 0)
     val_ld = DataLoader(val_ds, batch_size=batch_size, shuffle=False,
                         num_workers=num_workers, persistent_workers=num_workers > 0)
     cw = _class_weights(train_ds.rows).to(device)
     criterion = nn.CrossEntropyLoss(weight=cw, label_smoothing=label_smoothing)
-    model = model_mod.build_model(backbone, num_classes=2, pretrained=True,
-                                  drop_rate=drop_rate).to(device)
+    model = model_mod.build_attn_model(backbone, attention, num_classes=2,
+                                       drop_rate=drop_rate, pretrained=True).to(device)
 
     history, t0 = [], time.time()
     best_auc, best_epoch, best_meta, no_improve, gepoch = -1.0, -1, None, 0, 0
@@ -186,7 +194,8 @@ def fit_two_phase(train_ds, val_ds, device, ckpt_path, log, *, tag="",
         if improved:
             best_auc, best_epoch, no_improve = va_m["auc"], gepoch, 0
             best_meta = {"epoch": gepoch, "phase": phase, "val_metrics": va_m,
-                         "backbone": backbone, "class_names": utils.CLASS_NAMES,
+                         "backbone": backbone, "attention": attention,
+                         "class_names": utils.CLASS_NAMES,
                          "image_size": image_size, "split_csv": str(utils.SPLIT_CSV),
                          "device": str(device), "seed": utils.SEED, **(meta_extra or {})}
             model_mod.save_checkpoint(model, ckpt_path, meta=best_meta)

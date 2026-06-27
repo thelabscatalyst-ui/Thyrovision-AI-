@@ -4,7 +4,7 @@ Design notes
 ------------
 * Labels come from each image's Pascal-VOC XML: a single <object><name> of
   "0" (benign) or "1" (malignant).
-* We freeze the split to outputs/tn5000_split.csv so every run — training,
+* We freeze the split to outputs/csv/tn5000_split.csv so every run — training,
   evaluation, future CV — reads the *same* assignment. The test set is therefore
   defined exactly once (rule 3).
 * We adopt TN5000's official train/val/test split as published. TN5000 has no
@@ -51,7 +51,7 @@ def _read_ids(split: str) -> list[str]:
 
 # ── Frozen split manifest ──────────────────────────────────────────────────
 def build_split_manifest(force: bool = False) -> pd.DataFrame:
-    """Build (and cache) outputs/tn5000_split.csv: image_id, label, split."""
+    """Build (and cache) outputs/csv/tn5000_split.csv: image_id, label, split."""
     if utils.SPLIT_CSV.exists() and not force:
         return pd.read_csv(utils.SPLIT_CSV, dtype={"image_id": str})
 
@@ -78,7 +78,7 @@ def load_clean_manifest() -> pd.DataFrame:
     Built by near_duplicates.build_clean_manifest(); has near-duplicate leakers
     flagged keep=False and a `group` column for group-aware CV folds.
     """
-    clean = utils.OUTPUTS / "tn5000_split_clean.csv"
+    clean = utils.CSV_DIR / "tn5000_split_clean.csv"
     if not clean.exists():
         raise FileNotFoundError(
             f"{clean} missing — run near_duplicates.build_clean_manifest() first")

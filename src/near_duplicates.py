@@ -18,6 +18,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import timm
 import torch
 from scipy.sparse import coo_matrix
@@ -121,7 +122,7 @@ def _save_top_pairs(S, manifest, n=8) -> None:
     print(f"\nSaved top-pairs montage -> {out}")
 
 
-CLEAN_CSV = utils.OUTPUTS / "tn5000_split_clean.csv"
+CLEAN_CSV = utils.CSV_DIR / "tn5000_split_clean.csv"
 
 
 def build_clean_manifest(threshold: float = 0.98):

@@ -24,7 +24,7 @@ from .metrics import compute_metrics, format_metrics
 CKPT_PATH = utils.CHECKPOINTS_DIR / "resnet50_baseline.pt"
 CM_PNG = utils.FIGURES_DIR / "baseline_test_confusion_matrix.png"
 ROC_PNG = utils.FIGURES_DIR / "baseline_test_roc.png"
-METRICS_JSON = utils.LOGS_DIR / "baseline_test_metrics.json"
+METRICS_JSON = utils.JSON_DIR / "baseline_test_metrics.json"
 
 
 @torch.no_grad()

@@ -1,0 +1,13 @@
+stage,metric,mean,sd
+val,accuracy,0.8588,0.0075
+val,sensitivity,0.8846,0.0151
+val,specificity,0.7951,0.031
+val,precision,0.9141,0.0109
+val,f1,0.899,0.0058
+val,auc,0.9166,0.0074
+test,accuracy,0.868,0.0132
+test,sensitivity,0.8785,0.0219
+test,specificity,0.8394,0.0201
+test,precision,0.9371,0.0066
+test,f1,0.9067,0.0105
+test,auc,0.9204,0.0049

@@ -52,6 +52,20 @@ in the paper/report.** Most-recent context lives in the linked detailed docs.*
   oversampling/GAN). Ensembling was explored but **dropped** (it blends multiple
   backbones — incompatible with the single-backbone "+CBAM" comparison).
 
+### Step 7 — 5-fold CV (error-barred baseline) + honest cutoff analysis
+- ⭐ **EfficientNet-B3 5-fold CV: TEST AUC 0.920 ± 0.005, acc 0.868 ± 0.013** (sens 0.879,
+  spec 0.839; test sealed per fold). Tight error bars confirm the committed single-split
+  number, and **the paper reports no CV error bar on its plain B3.**
+- ⭐ **Cutoff tuning is nearly inert on this imbalanced set:** test accuracy @0.50 = 0.868,
+  threshold tuned on validation = 0.874, threshold tuned on the test set itself (optimistic
+  ceiling) = 0.882 — a <1 pt spread, inside the ±0.013 CV noise, with **AUC unchanged**
+  throughout. Moving the cutoff only slides along the sensitivity↔specificity see-saw; it
+  does not make the model better. → AUC is the honest headline; a "max-accuracy" cutoff
+  chosen on test is computable but **not reportable** (peeks at test labels).
+- **Committed operating-point policy:** threshold chosen for **sensitivity ≥ 0.90 on
+  validation**, applied once to test (clinically defensible — a missed cancer is the worst
+  error). *(detail: `Research/Baseline_Journey_And_Results.md` PART 8)*
+
 ---
 
 ## Key findings about the competitor paper (Bahmane 2025, *Medicina*) — all ⭐ citable

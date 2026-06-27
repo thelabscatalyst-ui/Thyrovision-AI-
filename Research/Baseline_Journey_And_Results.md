@@ -50,11 +50,16 @@ All numbers are on the **same TN5000 sealed test set** (official split).
 - **Verdict:** the two-phase recipe **fixed EfficientNet-B3** (0.848 → ~0.854, AUC 0.901 → 0.918). LR 1e-4 is correct (3e-5 underfit). ResNet barely changed (it was already near best — it's "recipe-robust").
 
 ### Post-processing — threshold tuning + ensemble (no retraining)
+> ⚠️ **SUPERSEDED — see PART 8.** Ensembling was later **dropped** (incompatible with the
+> single-backbone attention comparison). The "0.871 via tuned threshold" was a single-split,
+> partly test-tuned figure; the committed number is now the CV result **AUC 0.920 ± 0.005 /
+> acc 0.868** at the honest operating point. Kept here only as journey history.
+
 | Technique | Acc | AUC |
 |-----------|----:|----:|
-| B3 (default) + tuned threshold | **0.871** | 0.918 |
-| **Ensemble of all 4 + tuned threshold** | **0.890** | **0.941** |
-- See PART 7 for what this means.
+| B3 (default) + tuned threshold | 0.871 | 0.918 |
+| Ensemble of all 4 + tuned threshold | 0.890 | 0.941 |
+- See PART 7 (mechanics) and **PART 8 (current committed numbers + why max-accuracy isn't reportable).**
 
 ---
 
@@ -73,9 +78,11 @@ Their numbers (10-fold CV):
 
 **Us vs them:**
 - Our **ResNet-50 (85.2% CV) ≈ their ResNet-50 (85.1%)** → pipeline validated.
-- Our **tuned B3 AUC 0.918** > their plain B3 (0.89) and **matches/beats their hybrid (0.91)**.
-- Our **single-B3 accuracy 0.871 ≈ their plain B3 (0.871)**; our **ensemble 0.890 ≈ their hybrid (0.897)** — **without a GAN**.
-- We are now **competitive on accuracy and ahead on AUC.**
+- Our **B3 5-fold CV: acc 0.868 ± 0.013 ≈ their plain B3 (0.871)**, and **AUC 0.920 > their
+  plain B3 (0.89)** — with a CV error bar they don't report, and **no GAN**.
+- Their **89.7% headline is the GAN-augmented hybrid** (a different model, not plain B3);
+  **Phase-2 attention is our honest lever toward it.** (Ensembling was explored, then dropped.)
+- We are **on par on accuracy and ahead on AUC**, on the same official split.
 
 ---
 
@@ -102,10 +109,12 @@ highest-impact knobs. Still on the table if we want to push further:
   images** and fix class imbalance (TN5000 is 71% malignant). It was their **single
   biggest lever (+6.23% accuracy)**.
 - **Are we using it? No** — by design (it's marked out-of-scope in your project docs).
-  We use **class-weighted loss + augmentation + threshold tuning** instead.
+  We use **class-weighted loss + augmentation** instead (threshold tuning is a reporting
+  choice, not an imbalance fix; ensembling was dropped).
 - **Is it suitable for us? Not necessary, and not recommended now.** Reasons:
-  1. We already **reach the paper's accuracy (0.87–0.89) without it** via threshold
-     tuning + ensemble.
+  1. We already **match the paper's plain-B3 accuracy without it** — CV acc 0.868 ± 0.013,
+     and we **beat its AUC (0.920 vs 0.89)**. Phase-2 attention is our honest lever toward
+     their GAN-hybrid 0.897, no generative model needed.
   2. A GAN is a **whole separate, risky project** — it can generate unrealistic images
      and is hard to validate honestly.
   3. **Simpler, safer alternatives** exist if we ever need more (focal loss, benign
@@ -140,6 +149,12 @@ point. Fixing the cutoff (PART 7) lifted accuracy to 0.871 — the AUC told us t
 
 ## PART 7 — The "drastic change at the end" (threshold tuning + ensemble), explained
 
+> ⚠️ **Partly SUPERSEDED by PART 8.** Threshold tuning *on validation* remains valid and is
+> now the committed policy (sensitivity ≥ 0.90 @ val). **Ensembling was dropped.** And the CV
+> cutoff analysis (PART 8) showed threshold tuning buys <1 pt within noise — so the "0.854 →
+> 0.871" lift below overstates its importance. Read this for the *mechanics*; read PART 8 for
+> the *current honest numbers*.
+
 This was **not** retraining and **not** a trick — two standard post-training steps:
 
 **1. Threshold tuning.** A model outputs a *probability* of malignant (0–1). To make a
@@ -159,9 +174,51 @@ not just acc@0.5).
 
 ---
 
+## PART 8 — 5-fold cross-validation (the committed final baseline number)
+
+The single-split numbers above are one draw; CV gives the error bar. We ran the IDENTICAL
+two-phase B3 recipe across 5 stratified folds of the 4,000 trainval images, the test set
+sealed and evaluated once per fold (`src.cv_train --attention none`).
+
+**Result (mean ± SD over 5 folds):**
+| Stage | Acc | Sens | Spec | AUC |
+|-------|----:|-----:|-----:|----:|
+| **TEST** | 0.868 ± 0.013 | 0.879 ± 0.022 | 0.839 ± 0.020 | **0.920 ± 0.005** |
+| VAL | 0.859 ± 0.008 | 0.885 ± 0.015 | 0.795 ± 0.031 | 0.917 ± 0.007 |
+
+Per-fold TEST AUC: 0.916 / 0.922 / 0.924 / 0.926 / 0.914 — spread <0.01. Accuracy swings
+~3 pts fold-to-fold (it's a thresholded head-count on ~1,000 images), but AUC is rock-steady
+→ the model quality is consistent; the accuracy wobble is sampling noise, not instability.
+
+### Cutoff analysis — does "max accuracy" mean anything here? (honest answer: no)
+For each fold we measured TEST accuracy at three thresholds:
+| Threshold rule | TEST acc (mean ± SD) | Reportable? |
+|----------------|---------------------:|-------------|
+| Fixed 0.50 (neutral) | 0.868 ± 0.013 | ✅ |
+| Tuned on VALIDATION, applied to test | 0.874 ± 0.007 | ✅ (state the rule) |
+| Tuned on the TEST set itself (ceiling) | 0.882 ± 0.005 | ❌ peeks at test |
+
+The honest tuned gain is **+0.6 pt** (inside the noise); even *cheating* reaches only +1.4
+pt; **AUC never moves.** Because we use class weights, the model's balanced point already
+sits near 0.50 — "max accuracy" just lowers the cutoff to lean toward the majority class,
+undoing the balancing. So accuracy is not the lever, and a cutoff-maxed number is not a real
+improvement (this supersedes the earlier PART 7 framing that treated 0.871 as *the* number).
+
+### Committed operating-point policy
+- **Headline = AUC** (threshold-free): **0.920 ± 0.005.**
+- **Accuracy / sens / spec** at the threshold achieving **sensitivity ≥ 0.90 on validation**,
+  applied once to the sealed test (clinically defensible — a missed cancer is the worst error).
+  Never tune the threshold on test to inflate a reported number.
+- Same policy applied identically to every Phase-2 attention arm; arms are compared on **AUC**
+  so the comparison measures attention, not threshold choice.
+
+---
+
 ## Where we stand
 - **Validated pipeline** (our ResNet-50 = their ResNet-50).
-- **A tuned EfficientNet-B3** that matches the paper on accuracy (0.871) and **beats it on
-  AUC (0.918)** — no GAN.
-- **An ensemble** at ~0.89 acc / 0.94 AUC (optional "best achievable" headline).
-- **Next:** confirm the chosen baseline with 5-fold CV, then Phase 2 (CBAM vs SE vs none).
+- **A tuned EfficientNet-B3**, now **CV-confirmed: TEST AUC 0.920 ± 0.005, acc 0.868 ± 0.013**
+  — matches the paper on accuracy and **beats it on AUC (0.89)**, no GAN.
+- **Ensembling: DROPPED** (it blends multiple backbones — incompatible with the single-backbone
+  attention comparison; the old 0.89/0.94 ensemble rows in PART 2/PART 7 are superseded).
+- **Next:** single-split screen of the 4 attention arms (none/SE/CBAM/CPCA), then 5-fold CV
+  on the baseline + winning arm(s).

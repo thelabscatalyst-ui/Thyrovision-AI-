@@ -57,7 +57,28 @@ real-world prevalence. So "accuracy" here measures discrimination on an *enriche
 cohort, not population screening yield. This is a property of the dataset, shared
 with the closest published work (Bahmane et al. 2025).
 
+**How we handle it:** class-weighted loss (train weights benign 1.70 / malignant 0.71 — a
+benign mistake costs 2.39× more), not oversampling/GAN. This corrects the *learning* bias so
+the minority (benign) isn't ignored. It does **not** make accuracy a meaningful headline (a
+trivial "always malignant" model scores ~71%), which is exactly why **AUC is the headline**
+and the operating point is chosen by clinical sensitivity (≥0.90 on val), not by accuracy.
+Oversampling / focal loss are available A/B alternatives, deliberately not run (keeps
+attention the single Phase-2 variable). See [[honest-metric-reporting]].
+
 ## L4. Binary output not connected to TI-RADS
 This phase produces a benign/malignant probability only; it is not mapped to
 TI-RADS categories or calibrated risk bands. Calibration is a planned Phase-4
 (stretch) extension.
+
+## L5. Class weighting sets bias, not generalization — the operating point won't transfer
+Class weighting fixes *which class* the model leans toward on TN5000; it is **not** a
+generalization mechanism. Consequences for the planned cross-dataset (TN5000→DDTI) test:
+- **Class ratio differs across datasets**, so a threshold tuned on TN5000 validation will be
+  wrong on DDTI — the operating point must be **re-chosen on the new dataset**. AUC
+  (threshold-free) survives this shift; accuracy does not.
+- **Label semantics differ** — DDTI labels are TI-RADS categories, not biopsy-confirmed like
+  TN5000 — which caps achievable agreement regardless of model quality.
+- **Expect a performance drop** on the unseen dataset (domain shift: scanner, population).
+  Robustness comes from *features* (backbone / augmentation / attention), not the class
+  weights. The honest deliverable is to **measure** the drop (AUC + a re-tuned operating
+  point), not to assume strong transfer. DDTI stays quarantined until that Phase-3/4 test.

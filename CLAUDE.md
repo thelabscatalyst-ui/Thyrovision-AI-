@@ -22,8 +22,9 @@ and the folder/file changes, and wait for me to confirm before writing code.
 
 ## Current phase: Phase 2 — Attention comparison (Leg A)
 **Phase 1 baseline = DONE & signed off.** Committed backbone: **EfficientNet-B3**
-(two-phase fine-tune, 300px). Result: acc 0.871 / sens 0.895 / spec 0.807 / AUC 0.918
-(single split; matches the paper's plain B3 on accuracy, beats its AUC, no GAN). CV pending.
+(two-phase fine-tune, 300px). **5-fold CV: TEST AUC 0.920 ± 0.005, acc 0.868 ± 0.013,
+sens 0.879, spec 0.839** — matches the paper's plain B3 on accuracy, beats its AUC (0.89),
+no GAN. Tight error bars confirm the single-split number (acc 0.855 / AUC 0.918 @0.50).
 
 **Mentor-confirmed sequencing: (1) attention-mechanism comparison FIRST, (2) detection
 module LATER.**
@@ -88,7 +89,7 @@ Python 3.11 venv at `.venv/`. See memory: long-jobs-laptop-sleep.
 ## What we did (step by step)
 1. Built the TN5000 pipeline: load → clean burned-in artifacts (scanner text top-left,
    calipers, bottom-right marker) → official 70/10/20 split frozen to
-   `outputs/tn5000_split.csv`.
+   `outputs/csv/tn5000_split.csv`.
 2. First baseline (ResNet-50, simple recipe) + 5-fold CV → validated the pipeline.
 3. Found duplicate-image leakage in TN5000 (data-quality finding).
 4. Ran a fair backbone bake-off (ResNet-18/50, EfficientNet-B0/B3, one recipe) →
@@ -98,16 +99,26 @@ Python 3.11 venv at `.venv/`. See memory: long-jobs-laptop-sleep.
 6. Honest reporting: threshold tuning, AUC-vs-accuracy, class weighting for imbalance;
    **dropped ensembling** (incompatible with the single-backbone "+CBAM" comparison).
 
-## Committed baseline — EfficientNet-B3 (TN5000 official split; single split, CV pending)
+## Committed baseline — EfficientNet-B3 (TN5000 official split; 5-fold CV)
 Recipe: two-phase fine-tune (freeze head 6 ep @1e-3 → unfreeze @1e-4 cosine, early-stop),
-**300px, batch 16, dropout 0.4, label-smoothing 0.1, class-weighted loss**, light aug.
+**300px, batch 16, dropout 0.4, label-smoothing 0.1, class-weighted loss** (weights
+benign 1.70 / malignant 0.71), light aug. Run: `src.cv_train --attention none`.
 
-| Operating point | Acc | Sens | Spec | Precision | F1 | AUC |
-|-----------------|----:|-----:|-----:|----------:|---:|----:|
-| max-accuracy (thr 0.43) | 0.871 | 0.895 | 0.807 | 0.926 | 0.910 | 0.918 |
-| balanced / Youden (thr 0.50) | 0.855 | 0.867 | 0.822 | 0.930 | 0.897 | 0.918 |
+**5-fold CV — error-barred final number (test sealed per fold, mean ± SD):**
+| Stage | Acc | Sens | Spec | AUC |
+|-------|----:|-----:|-----:|----:|
+| **TEST** | 0.868 ± 0.013 | 0.879 ± 0.022 | 0.839 ± 0.020 | **0.920 ± 0.005** |
+| VAL | 0.859 ± 0.008 | 0.885 ± 0.015 | 0.795 ± 0.031 | 0.917 ± 0.007 |
+
+**Operating-point policy (committed):** AUC is the headline (threshold-free). For
+accuracy/sens/spec pick the threshold by **sensitivity ≥ 0.90 on validation**, apply once
+to test. CV cutoff analysis: acc @0.50 = 0.868, val-tuned = 0.874, test-tuned ceiling =
+0.882 → tuning buys <1 pt (within the ±0.013 noise) and never moves AUC. A "max-accuracy"
+cutoff chosen on test is **computable but NOT reportable** (it peeks at the test labels).
 
 vs paper's plain EfficientNet-B3 (87.1% / AUC 0.89): **we match accuracy, beat AUC, no GAN.**
+The paper's 89.7% headline is its full GAN-augmented hybrid — a different model; Phase-2
+attention is our honest lever toward it.
 
 ## Key findings (⭐ = citable)
 - ⭐ **TN5000 has no patient-ID field** → its official split is image-level (can't prove
@@ -120,7 +131,12 @@ vs paper's plain EfficientNet-B3 (87.1% / AUC 0.89): **we match accuracy, beat A
 - ⭐ **Our plain ResNet-50 (85.2% CV) reproduces the paper's ResNet-50 (85.1%)** →
   independent pipeline validation.
 - ⭐ **Tuned EfficientNet-B3 matches the paper's plain B3 on accuracy and beats its AUC,
-  without a GAN.**
+  without a GAN.** Confirmed by **5-fold CV: TEST AUC 0.920 ± 0.005** (tight error bar) —
+  the paper reports no CV error bars on its B3.
+- ⭐ **Cutoff-tuning is nearly inert on this imbalanced set:** moving the threshold changed
+  accuracy by <1 pt (0.868→0.874 honest, 0.882 even when peeking at test) and never moved
+  AUC → confirms AUC is the honest headline and "max-accuracy" numbers are threshold
+  artifacts, not better models.
 - ⭐ **EfficientNet is recipe-sensitive** — a ResNet-friendly recipe under-tunes it
   (B0 overfit, specificity collapsed); fixed by the two-phase recipe.
 - ⭐ **Medicina paper (Bahmane 2025) inconsistencies:** plain B3 reported at 87.1% AND
@@ -134,10 +150,14 @@ vs paper's plain EfficientNet-B3 (87.1% / AUC 0.89): **we match accuracy, beat A
 ## Key decisions & rationale
 - **Backbone = EfficientNet-B3:** mentor-confirmed + paper-aligned (their backbone) +
   edges ResNet-18 on AUC/accuracy/sensitivity at sensible thresholds.
-- **Imbalance (71% malignant) → class weighting** (valid, often-better alternative to
-  oversampling/GAN). Oversampling/focal-loss are easy to A/B if wanted.
-- **AUC is the honest headline** (threshold-free); always report sens/spec too; choose
-  the operating threshold by **clinical sensitivity**, not raw accuracy.
+- **Imbalance (71% malignant) → class weighting** (committed; train weights benign 1.70 /
+  malignant 0.71 — a benign mistake costs 2.39× more). Sets the model's class *bias*, not
+  generalization. Oversampling/focal-loss noted as available A/Bs, deliberately **not run**
+  so attention stays the single Phase-2 variable.
+- **AUC is the honest headline** (threshold-free); always report sens/spec + confusion.
+  **Operating point = threshold for sensitivity ≥ 0.90 on validation, applied once to
+  test** — never tune the threshold on test to inflate a reported number. See memory
+  [[honest-metric-reporting]].
 - **No G-RAN GAN** (out of scope; reached paper accuracy without it). **No ensembling.**
 
 ## Detailed docs
@@ -150,14 +170,16 @@ vs paper's plain EfficientNet-B3 (87.1% / AUC 0.89): **we match accuracy, beat A
 | Paper-log deep dive (papers 2/4/6) | `Research/Paper_Analysis_2_4_6.md` |
 | Backbone bake-off | `Research/Backbone_Bakeoff_Findings.md` |
 | Committed B3 confusion matrix | `outputs/figures/FINAL_b3_confusion_matrix.png` |
-| All tonight runs' numbers / probabilities | `outputs/logs/csv/tonight_summary.csv`, `outputs/tonight_probs.npz` |
+| All tonight runs' numbers / probabilities | `outputs/csv/tonight_summary.csv`, `outputs/tonight_probs.npz` |
+| Baseline 5-fold CV results | `outputs/csv/cv_efficientnet_b3_none_{results,summary}.csv` |
 
 ## Open threads
 1. **Phase 2 (NOW): attention comparison** — B3 vs +SE vs +CBAM vs +CPCA, each added as an
    external module after the backbone, identical recipe/split. The core contribution
    (fixes the paper's "SE never compared" gap). Plan in `Research/Phase2_Plan.md`.
-2. **Confirm EfficientNet-B3 with 5-fold CV** (final error-barred baseline number) — can
-   run alongside / before the attention arms.
+2. ✅ **DONE — EfficientNet-B3 5-fold CV:** TEST AUC 0.920 ± 0.005, acc 0.868 ± 0.013
+   (`src.cv_train --attention none`). Error-barred baseline locked. Next: same CV on the
+   winning attention finalist(s) after the single-split screen.
 3. **Phase 3 (LATER): detection** — YOLOv8 + MobileNetV4 backbone (+ attention) to localize
    nodules / cut compute. Mentor-confirmed this comes *after* the attention comparison;
    don't build YOLO machinery yet.

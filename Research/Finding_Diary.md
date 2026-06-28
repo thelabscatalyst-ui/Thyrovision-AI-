@@ -68,6 +68,34 @@ in the paper/report.** Most-recent context lives in the linked detailed docs.*
 
 ---
 
+## Phase 2 — Attention comparison (Leg A). Result: external attention does NOT help.
+
+### Step 8 — Controlled 4-way attention screen (none / SE / CBAM / CPCA)
+- Same B3 backbone + same two-phase recipe; only the external attention module differs
+  (added *after* the backbone, since B3 has SE natively). Single official split, same seed —
+  so any difference is attributable to attention.
+
+| Arm | val AUC | TEST AUC | acc | sens | spec |
+|-----|--------:|---------:|----:|-----:|-----:|
+| none | 0.949 | **0.933** | 0.879 | 0.891 | 0.848 |
+| se   | 0.939 | 0.932 | 0.887 | 0.914 | 0.814 |
+| cbam | 0.925 | 0.918 | 0.864 | 0.870 | 0.848 |
+| cpca | 0.950 | 0.910 | 0.878 | 0.903 | 0.810 |
+
+- ⭐ **External attention did not improve over the plain B3 baseline** — baseline best, SE a
+  dead tie, CBAM/CPCA slightly worse. Reasons: B3 already has SE in every block; a single
+  late module on a 10×10 map gives spatial attention almost nothing to do; and whole-image
+  classification global-pools away the spatial detail CBAM/CPCA exploit (their win in Paper 2
+  was a *detection* task → **attention is task-specific**, confirmed not contradicted).
+- ⭐ **CPCA had the best validation AUC (0.950) but nearly the worst test AUC (0.910)** — a
+  clean overfitting signature; reinforces sealing the test set and never trusting val alone.
+- Single-split; **5-fold CV of the top arm (SE) pending** to error-bar the "no benefit" claim
+  against the baseline CV (0.920 ± 0.005). Source: `outputs/csv/phase2_attention_summary.csv`.
+- Honest framing: a **rigorous negative result that fills the paper's "SE never compared"
+  gap** — the fair comparison *is* the contribution, not a guaranteed accuracy gain.
+
+---
+
 ## Key findings about the competitor paper (Bahmane 2025, *Medicina*) — all ⭐ citable
 - ⭐ Reports **plain EfficientNet-B3 at two different accuracies** (87.1% and 89.7%);
   training time as **both 42 and 12 min**; train/val/test split **stated two ways**

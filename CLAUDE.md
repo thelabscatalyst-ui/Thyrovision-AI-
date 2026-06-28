@@ -33,6 +33,10 @@ module LATER.**
   this controlled comparison is the core contribution (fixes the paper's "SE never
   compared" gap). **Note:** EfficientNet-B3 has SE *natively*, so each mechanism is added
   as an **external module after the backbone** for a fair like-for-like comparison.
+  **Screen result (single split, TEST AUC):** none **0.933** ≈ se 0.932 > cbam 0.918 >
+  cpca 0.910 → **external attention did NOT improve over the plain B3 baseline** (SE ties,
+  CBAM/CPCA slightly worse). A clean negative result that fills the gap. Next: 5-fold CV the
+  SE arm to error-bar it vs the baseline CV. Source: `outputs/csv/phase2_attention_summary.csv`.
 - **Phase 3 (LATER) — detection:** YOLOv8 + **MobileNetV4** backbone (+ attention) to
   localize nodules / cut compute. Scope only after Phase 2 — **do not build YOLO
   machinery yet.**
@@ -146,6 +150,11 @@ attention is our honest lever toward it.
   +6.23%).
 - ⭐ **Attention is task-specific** (Paper 2: in a YOLOv8 detector, CPCA beat CBAM) →
   attention choice must be *tested* (baseline / +SE / +CBAM), not assumed.
+- ⭐ **External attention does NOT improve our B3 classifier** (fair single-split screen,
+  TEST AUC): none 0.933 / SE 0.932 / CBAM 0.918 / CPCA 0.910 — baseline best, SE ties,
+  CBAM/CPCA worse. Consistent with B3's native SE + spatial attention being wasted after
+  global pooling on a 10×10 map (CBAM/CPCA's win in Paper 2 was a *detection* task). A clean
+  negative result filling the paper's "SE never compared" gap; CV of SE pending to error-bar it.
 
 ## Key decisions & rationale
 - **Backbone = EfficientNet-B3:** mentor-confirmed + paper-aligned (their backbone) +
@@ -174,9 +183,10 @@ attention is our honest lever toward it.
 | Baseline 5-fold CV results | `outputs/csv/cv_efficientnet_b3_none_{results,summary}.csv` |
 
 ## Open threads
-1. **Phase 2 (NOW): attention comparison** — B3 vs +SE vs +CBAM vs +CPCA, each added as an
-   external module after the backbone, identical recipe/split. The core contribution
-   (fixes the paper's "SE never compared" gap). Plan in `Research/Phase2_Plan.md`.
+1. **Phase 2 (NOW): attention comparison** — single-split screen DONE: none 0.933 ≈ se 0.932
+   > cbam 0.918 > cpca 0.910 (test AUC) → **external attention doesn't beat the B3 baseline.**
+   **SE 5-fold CV pending** (`src.cv_train --attention se`) to error-bar the top contender,
+   then write the Phase-2 verdict. Results: `outputs/csv/phase2_attention_summary.csv`.
 2. ✅ **DONE — EfficientNet-B3 5-fold CV:** TEST AUC 0.920 ± 0.005, acc 0.868 ± 0.013
    (`src.cv_train --attention none`). Error-barred baseline locked. Next: same CV on the
    winning attention finalist(s) after the single-split screen.
@@ -186,3 +196,10 @@ attention is our honest lever toward it.
 4. **Open data question (user-flagged):** the duplicate finding's "adjacent-photo" pattern
    — are the byte-identical duplicates consecutive frames / adjacent image-IDs? Investigate
    before any strong novelty claim. See `Research/TN5000_Duplicate_Finding.md` (§Finding).
+5. **Future work — accuracy-boost roadmap (POST-completion; user deferred until pillars done):**
+   to raise acc+AUC *together* (real model gains, not threshold tricks): Tier 1 = TTA / EMA /
+   MixUp (cheap, honest); then ensemble; then a **GAN** (G-RAN-style synthetic benigns) as the
+   imbalance lever. Hard rules: synthetic data **TRAIN-ONLY** (never val/test); validate fakes
+   (FID + radiologist review + real-data ablation). Context: we already match the externally-
+   validated field benchmark (meta-analysis AUC ≈0.92), so this is for a deployable-number push,
+   not the research contribution.

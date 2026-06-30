@@ -1,0 +1,5 @@
+method,ece,brier,chosen
+raw,0.1271,0.1123,False
+temperature,0.1111,0.1109,False
+platt,0.0437,0.0948,True
+isotonic,0.0444,0.0979,False

@@ -130,6 +130,26 @@ in the paper/report.** Most-recent context lives in the linked detailed docs.*
 
 ---
 
+## Pillar — TI-RADS clinical layer (first build). Calibrated score → risk tier → recommendation.
+
+### Step 10 — Calibration + relative risk tiers + report cards (`src/tirads.py`)
+- A reporting layer **on top of** the classifier: **temperature scaling** (T = 0.817, fit on
+  fold-1 validation) → calibrated P(malignant) → **relative suspicion tier** (Low /
+  Intermediate / High / Very high) with a recommendation, plus the Grad-CAM heatmap = a
+  clinician-readable **report card**.
+- ⭐ **Calibration compared & well-calibrated:** tested temperature / Platt / isotonic (fit on
+  val, scored on test) — **Platt wins, ECE 0.127 → 0.044** (Brier 0.112 → 0.095), now in the
+  well-calibrated range (<0.05). The model was *under-confident* (reliability curve bowed above
+  the diagonal, partly from label smoothing); a single temperature only reached 0.111, but
+  Platt's shift+scale fixes it. Isotonic ties (0.044) but Platt is the more robust 2-parameter fit.
+- **Named limits (in the output):** calibrated to TN5000's **enriched 71% prior** → tiers are
+  *relative*, not absolute % risk; **risk-tier alignment, NOT ACR TI-RADS feature scoring**;
+  radiologist-TI-RADS validation needs DDTI (quarantined). See `research/Limitations.md` L4.
+- Figures: `outputs/figures/EfficientNet_B3_Baseline/calibration_reliability.png`,
+  `tirads_report_cards.png`; numbers: `outputs/csv/EfficientNet_B3_Baseline/calibration.csv`.
+
+---
+
 ## Key findings about the competitor paper (Bahmane 2025, *Medicina*) — all ⭐ citable
 - ⭐ Reports **plain EfficientNet-B3 at two different accuracies** (87.1% and 89.7%);
   training time as **both 42 and 12 min**; train/val/test split **stated two ways**

@@ -67,10 +67,20 @@ and the operating point is chosen by clinical sensitivity (≥0.90 on val), not 
 Oversampling / focal loss are available A/B alternatives, deliberately not run (keeps
 attention the single Phase-2 variable). See [[honest-metric-reporting]].
 
-## L4. Binary output not connected to TI-RADS
-This phase produces a benign/malignant probability only; it is not mapped to
-TI-RADS categories or calibrated risk bands. Calibration is a planned Phase-4
-(stretch) extension.
+## L4. Binary output → relative risk tiers (first build), not true ACR TI-RADS
+A clinical-language layer now sits on top of the classifier (`src/tirads.py`): calibration
+compares **temperature / Platt / isotonic** (fit on validation, scored on test); **Platt wins
+— ECE 0.127 → 0.044, now well-calibrated** (<0.05). The model was *under-confident* (the
+reliability curve bowed above the diagonal — partly from label smoothing); Platt's shift+scale
+corrects it where a single temperature couldn't. The calibrated score maps to **relative
+suspicion tiers** (Low / Intermediate / High / Very high) with recommendations + the Grad-CAM
+heatmap (report cards). **Named limits:** (1)
+calibrated to TN5000's **enriched ~71%-malignant prior**, so tiers are *relative*, not
+absolute % risk (absolute needs a prevalence adjustment); (2) it is **risk-tier alignment,
+NOT ACR TI-RADS feature scoring** (we don't compute composition/echogenicity/shape/margin/foci);
+(3) validating tiers against radiologist TI-RADS needs DDTI (quarantined); and absolute %
+risk would need a prevalence/prior adjustment. Those remain future work — the calibration
+itself is now good (Platt, ECE 0.044).
 
 ## L5. Class weighting sets bias, not generalization — the operating point won't transfer
 Class weighting fixes *which class* the model leans toward on TN5000; it is **not** a

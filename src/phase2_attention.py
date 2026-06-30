@@ -33,7 +33,7 @@ from .metrics import compute_metrics, format_metrics
 from .train import fit_two_phase
 
 METRIC_KEYS = ["accuracy", "sensitivity", "specificity", "precision", "f1", "auc"]
-SUMMARY_CSV = utils.CSV_DIR / "phase2_attention_summary.csv"
+SUMMARY_CSV = utils.CSV_ATTENTION / "phase2_attention_summary.csv"
 
 # Identical backbone + recipe; only `attention` differs (the controlled variable).
 BACKBONE = "efficientnet_b3"
@@ -49,7 +49,7 @@ ARMS = ["none", "se", "cbam", "cpca"]
 
 
 def run_arm(attention: str, device, log) -> dict:
-    result_path = utils.JSON_DIR / f"phase2_{attention}_result.json"
+    result_path = utils.JSON_ATTENTION / f"phase2_{attention}_result.json"
     ckpt = utils.CHECKPOINTS_DIR / f"phase2_b3_{attention}.pt"
     if result_path.exists():
         r = json.loads(result_path.read_text())
@@ -69,8 +69,8 @@ def run_arm(attention: str, device, log) -> dict:
         tr, va, device, ckpt, log, tag=f"attn-{attention}", backbone=BACKBONE,
         attention=attention, image_size=IMAGE_SIZE, drop_rate=DROP, label_smoothing=LS,
         ft_lr=FT_LR, batch_size=BATCH, num_workers=WORKERS,
-        history_csv=utils.CSV_DIR / f"phase2_{attention}_history.csv",
-        curve_png=utils.FIGURES_DIR / f"phase2_{attention}_curve.png")
+        history_csv=utils.CSV_HISTORY / f"phase2_{attention}_history.csv",
+        curve_png=utils.FIG_ARCHIVE / f"phase2_{attention}_curve.png")
 
     model, _ = model_mod.load_checkpoint(ckpt, device)
     y, p = _infer(model, DataLoader(te, batch_size=BATCH, shuffle=False,

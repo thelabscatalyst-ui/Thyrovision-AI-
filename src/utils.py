@@ -35,10 +35,37 @@ OUTPUTS = PROJECT_ROOT / "outputs"
 CHECKPOINTS_DIR = OUTPUTS / "checkpoints"
 FIGURES_DIR = OUTPUTS / "figures"
 LOGS_DIR = OUTPUTS / "logs"
-CSV_DIR = OUTPUTS / "csv"             # frozen split + result/history/summary CSVs (tracked)
-JSON_DIR = LOGS_DIR / "json"         # per-run result JSONs + metrics (ignored)
+CSV_DIR = OUTPUTS / "csv"             # tracked; frozen split at top level, results grouped below
+JSON_DIR = LOGS_DIR / "json"         # per-run result JSONs (ignored), grouped by experiment
 LOG_DIR = LOGS_DIR / "logs_files"    # .log / .txt run logs (ignored)
-SPLIT_CSV = CSV_DIR / "tn5000_split.csv"
+CACHE_DIR = LOGS_DIR / "cache"       # regenerable binary caches, e.g. embeddings (ignored)
+
+# json/ grouped like csv/ (resume-markers + metrics, gitignored):
+JSON_B3_BASELINE = JSON_DIR / "EfficientNet_B3_Baseline"
+JSON_ATTENTION = JSON_DIR / "Attention"
+JSON_BAKEOFF = JSON_DIR / "Bakeoff"
+JSON_TONIGHT = JSON_DIR / "Tonight"
+JSON_LEGACY = JSON_DIR / "Resnet_50"
+# csv/ is grouped so everything is easy to find:
+CSV_SPLITS = CSV_DIR / "Splits"              # frozen split + dedup manifest (core data)
+CSV_MANIFESTS = CSV_DIR / "Data_Quality"     # duplicates + caliper-audit evidence
+CSV_B3_BASELINE = CSV_DIR / "EfficientNet_B3_Baseline"   # committed B3 (none) CV results/summary
+CSV_ATTENTION = CSV_DIR / "Attention"        # Phase-2 attention screen + SE CV
+CSV_BAKEOFF = CSV_DIR / "Bakeoff"            # backbone bake-off
+CSV_TONIGHT = CSV_DIR / "Tonight"            # tonight baseline-pick summary
+CSV_LEGACY = CSV_DIR / "Resnet_50"           # superseded ResNet-50 CV artifacts
+CSV_HISTORY = CSV_DIR / "Archive"            # per-epoch training curves (archival)
+
+SPLIT_CSV = CSV_SPLITS / "tn5000_split.csv"              # frozen split (read by every run)
+SPLIT_CLEAN_CSV = CSV_SPLITS / "tn5000_split_clean.csv"  # de-duplicated manifest
+
+# figures/ mirrors the csv/ grouping (tracked in git — result figures belong in the report).
+FIG_DATA_QUALITY = FIGURES_DIR / "Data_Quality"          # caliper, cleaning, duplicate evidence
+FIG_B3_BASELINE = FIGURES_DIR / "EfficientNet_B3_Baseline"  # committed B3 CV confusion/ROC
+FIG_ATTENTION = FIGURES_DIR / "Attention"                # attention comparison
+FIG_BAKEOFF = FIGURES_DIR / "Bakeoff"                    # backbone bake-off chart
+FIG_LEGACY = FIGURES_DIR / "Resnet_50"                   # superseded ResNet-50 figures
+FIG_ARCHIVE = FIGURES_DIR / "Archive"                    # per-run training curves (archival)
 
 # Class convention: 0 = benign, 1 = malignant (= positive class for sensitivity).
 CLASS_NAMES = ("benign", "malignant")
@@ -75,7 +102,12 @@ def get_device() -> torch.device:
 
 def ensure_output_dirs() -> None:
     """Create the outputs/ subfolders if they don't already exist."""
-    for d in (CHECKPOINTS_DIR, FIGURES_DIR, CSV_DIR, JSON_DIR, LOG_DIR):
+    for d in (CHECKPOINTS_DIR, FIGURES_DIR, CSV_DIR, JSON_DIR, LOG_DIR, CACHE_DIR,
+              CSV_SPLITS, CSV_MANIFESTS, CSV_B3_BASELINE, CSV_ATTENTION,
+              CSV_BAKEOFF, CSV_TONIGHT, CSV_LEGACY, CSV_HISTORY,
+              FIG_DATA_QUALITY, FIG_B3_BASELINE, FIG_ATTENTION, FIG_BAKEOFF,
+              FIG_LEGACY, FIG_ARCHIVE,
+              JSON_B3_BASELINE, JSON_ATTENTION, JSON_BAKEOFF, JSON_TONIGHT, JSON_LEGACY):
         d.mkdir(parents=True, exist_ok=True)
 
 

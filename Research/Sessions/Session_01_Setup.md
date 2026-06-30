@@ -9,7 +9,7 @@ skeleton (folders, git, virtual environment, dependencies) — no model or
 data-loading code yet.
 
 ## 2. What actually happened
-- Read all project context: `CLAUDE.md`, `Research/Project_Context.md`, the vision
+- Read all project context: `CLAUDE.md`, `research/Project_Context.md`, the vision
   PDF, and `Architecture.docx`. (Context files were initially empty on disk and had
   to be re-saved before they could be read.)
 - **Inspected both datasets (read-only, nothing modified):**
@@ -27,7 +27,7 @@ data-loading code yet.
 - **GPU check:** no NVIDIA/CUDA. Machine is Apple M5, 16 GB unified memory, Metal 4.
   Accelerator is the Apple GPU via PyTorch's **MPS** backend.
 - **Built the project skeleton:** created `src/`, `outputs/{checkpoints,figures,logs}/`,
-  `Research/Sessions/`; initialised git (branch renamed `master`→`main`); fixed the
+  `research/Sessions/`; initialised git (branch renamed `master`→`main`); fixed the
   `.gitignore` (was empty) to exclude `Data/`, checkpoints, logs, weights, venv —
   `outputs/figures/` left tracked on purpose.
 - **Environment:** created a Python **3.11.15** venv (system default is 3.14, too new

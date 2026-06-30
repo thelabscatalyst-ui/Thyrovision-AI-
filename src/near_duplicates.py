@@ -27,7 +27,7 @@ from torch.utils.data import DataLoader
 
 from . import dataset, preprocess, utils
 
-EMB_PATH = utils.OUTPUTS / "tn5000_embeddings.npy"
+EMB_PATH = utils.CACHE_DIR / "tn5000_embeddings.npy"
 THRESHOLDS = (0.95, 0.97, 0.98, 0.99)
 
 
@@ -117,12 +117,12 @@ def _save_top_pairs(S, manifest, n=8) -> None:
                                  (f"  sim={sims[k]:.3f}" if c == 0 else ""), fontsize=8)
     fig.suptitle("Most-similar image pairs (verify near-duplicates)")
     fig.tight_layout()
-    out = utils.FIGURES_DIR / "near_duplicate_top_pairs.png"
+    out = utils.FIG_DATA_QUALITY / "near_duplicate_top_pairs.png"
     fig.savefig(out, dpi=110); plt.close(fig)
     print(f"\nSaved top-pairs montage -> {out}")
 
 
-CLEAN_CSV = utils.CSV_DIR / "tn5000_split_clean.csv"
+CLEAN_CSV = utils.SPLIT_CLEAN_CSV
 
 
 def build_clean_manifest(threshold: float = 0.98):

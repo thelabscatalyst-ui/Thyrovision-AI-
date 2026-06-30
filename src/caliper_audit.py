@@ -84,7 +84,7 @@ def validate(ids=("000001", "000191", "004755", "002500", "000500", "004000")) -
         ax.set_title(f"{img_id}: {len(detect_calipers(gray))} caliper(s)")
         ax.axis("off")
     fig.tight_layout()
-    out = utils.FIGURES_DIR / "stageA_caliper_detection.png"
+    out = utils.FIG_DATA_QUALITY / "stageA_caliper_detection.png"
     fig.savefig(out, dpi=110)
     plt.close(fig)
     print(f"Saved detector validation -> {out}")

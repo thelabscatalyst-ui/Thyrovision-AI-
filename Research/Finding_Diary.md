@@ -12,7 +12,7 @@ in the paper/report.** Most-recent context lives in the linked detailed docs.*
   70/10/20 split.
 - ⭐ **TN5000 has NO patient-ID field** (verified across all annotations). Its official
   split is therefore **image-level**, not patient-level — a documented limitation.
-  *(detail: `Research/Limitations.md` L1)*
+  *(detail: `research/Limitations.md` L1)*
 
 ### Step 2 — First baseline + cross-validation (ResNet-50)
 - Simple single-phase fine-tune. Single split acc 0.853 / AUC 0.922; 5-fold CV
@@ -27,7 +27,7 @@ in the paper/report.** Most-recent context lives in the linked detailed docs.*
 - ⭐ **Not mentioned in the TN5000 paper nor the Medicina paper** — appears undocumented
   (one reproducibility paper, MDPI Electronics 15/1/151, mentions investigating TN5000
   leakage; must be read in full to fully settle novelty).
-  *(detail: `Research/TN5000_Duplicate_Finding.md`; reproduce: `src/verify_duplicates.py`)*
+  *(detail: `research/TN5000_Duplicate_Finding.md`; reproduce: `src/verify_duplicates.py`)*
 
 ### Step 4 — Backbone bake-off (fair, single recipe)
 - ResNet-18/50, EfficientNet-B0/B3 under one identical recipe. ResNet-50 won; both
@@ -41,7 +41,7 @@ in the paper/report.** Most-recent context lives in the linked detailed docs.*
 - ⭐ **Tuned EfficientNet-B3 = 87.1% accuracy / AUC 0.918** (sens 0.895, spec 0.807 at the
   chosen threshold). **Matches the paper's plain EfficientNet-B3 (87.1%) and beats its
   AUC (0.89) — with no GAN.** This is the committed baseline.
-  *(detail + full tables: `Research/Baseline_Journey_And_Results.md`)*
+  *(detail + full tables: `research/Baseline_Journey_And_Results.md`)*
 
 ### Step 6 — Honest reporting refinements
 - ⭐ **Threshold choice matters on imbalanced data:** accuracy at the default 0.5 cutoff
@@ -64,7 +64,7 @@ in the paper/report.** Most-recent context lives in the linked detailed docs.*
   chosen on test is computable but **not reportable** (peeks at test labels).
 - **Committed operating-point policy:** threshold chosen for **sensitivity ≥ 0.90 on
   validation**, applied once to test (clinically defensible — a missed cancer is the worst
-  error). *(detail: `Research/Baseline_Journey_And_Results.md` PART 8)*
+  error). *(detail: `research/Baseline_Journey_And_Results.md` PART 8)*
 
 ---
 
@@ -89,8 +89,9 @@ in the paper/report.** Most-recent context lives in the linked detailed docs.*
   was a *detection* task → **attention is task-specific**, confirmed not contradicted).
 - ⭐ **CPCA had the best validation AUC (0.950) but nearly the worst test AUC (0.910)** — a
   clean overfitting signature; reinforces sealing the test set and never trusting val alone.
-- Single-split; **5-fold CV of the top arm (SE) pending** to error-bar the "no benefit" claim
-  against the baseline CV (0.920 ± 0.005). Source: `outputs/csv/phase2_attention_summary.csv`.
+- Single-split screen; **5-fold CV of the top arm (SE) now DONE: 0.913 ± 0.007 < baseline
+  0.920 ± 0.005** → attention confirmed not to help, error-barred. Source:
+  `outputs/csv/Attention/phase2_attention_summary.csv` (screen) + `cv_efficientnet_b3_se_summary.csv`.
 - Honest framing: a **rigorous negative result that fills the paper's "SE never compared"
   gap** — the fair comparison *is* the contribution, not a guaranteed accuracy gain.
 
@@ -112,17 +113,18 @@ in the paper/report.** Most-recent context lives in the linked detailed docs.*
   90.8% vs 91.5% mAP) → we must *test* attention (baseline / +SE / +CBAM), not assume.
 - Paper 6 cross-validated classification only internally (DDTI) — our planned
   TN5000→DDTI cross-test is more rigorous.
-  *(detail: `Research/Paper_Analysis_2_4_6.md`)*
+  *(detail: `research/Paper_Analysis_2_4_6.md`)*
 
 ---
 
 ## Where to look
 | Topic | File |
 |-------|------|
-| Full baseline journey + all result tables | `Research/Baseline_Journey_And_Results.md` |
-| Duplicate-leakage finding (+ reproduce) | `Research/TN5000_Duplicate_Finding.md` |
-| Named limitations (ours + theirs) | `Research/Limitations.md` |
+| Full baseline journey + all result tables | `research/Baseline_Journey_And_Results.md` |
+| Duplicate-leakage finding (+ reproduce) | `research/TN5000_Duplicate_Finding.md` |
+| Named limitations (ours + theirs) | `research/Limitations.md` |
 | Gaps → how we tackle each | (in `Limitations.md` + competitor notes) |
-| Paper-log deep dive (2/4/6) | `Research/Paper_Analysis_2_4_6.md` |
-| Committed B3 confusion matrix | `outputs/figures/FINAL_b3_confusion_matrix.png` |
-| Archived (superseded) runs | `outputs/extra/` |
+| Paper-log deep dive (2/4/6) | `research/Paper_Analysis_2_4_6.md` |
+| Committed B3 CV figures | `outputs/figures/EfficientNet_B3_Baseline/` (cv_confusion_0.50, _sens90, cv_roc) |
+| Attention comparison figure | `outputs/figures/Attention/attention_auc_comparison.png` |
+| Archived (superseded) runs | `outputs/csv/Archive/`, `outputs/figures/Archive/` |

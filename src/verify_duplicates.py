@@ -25,7 +25,7 @@ from PIL import Image
 from . import dataset, utils
 
 DHASH_SIZE = 8
-DUPES_CSV = utils.CSV_DIR / "tn5000_duplicates.csv"
+DUPES_CSV = utils.CSV_MANIFESTS / "tn5000_duplicates.csv"
 
 
 def _dhash(img: Image.Image, size: int = DHASH_SIZE) -> np.ndarray:

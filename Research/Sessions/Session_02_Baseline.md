@@ -15,7 +15,7 @@ metrics, not accuracy alone.
   the PyTorch dataset (whole image in; bounding boxes unused, reserved for Phase 3).
 - **Split decision:** TN5000 has **no recoverable patient ID** (verified), so used
   the official image-level split (train 3500 / val 500 / test 1000) and documented
-  the limitation — see L1 in `Research/Limitations.md`.
+  the limitation — see L1 in `research/Limitations.md`.
 - **Artifact cleaning:** corner text/marker masking (removes scanner-ID leakage) +
   conservative pure-white caliper inpaint. Dim grey calipers left in (can't be
   removed without erasing echogenic foci).
@@ -25,7 +25,7 @@ metrics, not accuracy alone.
   permutation noise-band check: train significant-but-negligible, **test clean**.
   Decision (governed by effect size, not p-value): proceed; document as inert
   confound; keep Phase-3 Grad-CAM caliper-attention check binding. Full chain in
-  `Research/Limitations.md` L2 + `outputs/caliper_audit*.csv`.
+  `research/Limitations.md` L2 + `outputs/caliper_audit*.csv`.
 - **Training** (`src/model.py`, `metrics.py`, `train.py`): ImageNet-pretrained
   ResNet-50, class-weighted CE (71/29 imbalance), AdamW lr 1e-4 cosine, batch 32,
   early stop on val AUC, MPS.

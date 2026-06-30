@@ -61,7 +61,7 @@ def save_clean_montage() -> None:
         for ax in axes[i]:
             ax.axis("off")
     fig.tight_layout()
-    out = utils.FIGURES_DIR / "stageA_raw_vs_cleaned.png"
+    out = utils.FIG_DATA_QUALITY / "stageA_raw_vs_cleaned.png"
     fig.savefig(out, dpi=110)
     plt.close(fig)
     print(f"\nSaved cleaning montage -> {out}")
@@ -82,7 +82,7 @@ def save_aug_montage() -> None:
         ax.axis("off")
     fig.suptitle(f"Training augmentations on {img_id} (cleaned)")
     fig.tight_layout()
-    out = utils.FIGURES_DIR / "stageA_augmentations.png"
+    out = utils.FIG_DATA_QUALITY / "stageA_augmentations.png"
     fig.savefig(out, dpi=110)
     plt.close(fig)
     print(f"Saved augmentation montage -> {out}")

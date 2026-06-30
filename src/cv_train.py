@@ -84,8 +84,11 @@ def main():
     log.info(f"Device: {device} | {N_FOLDS}-fold CV | backbone={backbone} attention={attention} "
              f"| recipe: two-phase {IMAGE_SIZE}px batch {BATCH} drop {DROP} ls {LS} ft_lr {FT_LR}")
 
-    cv_csv = utils.CSV_DIR / f"cv_{arm}_results.csv"
-    cv_summary_csv = utils.CSV_DIR / f"cv_{arm}_summary.csv"
+    # baseline (none) -> EfficientNet_B3_Baseline/, any attention arm -> attention/
+    results_dir = utils.CSV_B3_BASELINE if attention == "none" else utils.CSV_ATTENTION
+    results_dir.mkdir(parents=True, exist_ok=True)
+    cv_csv = results_dir / f"cv_{arm}_results.csv"
+    cv_summary_csv = results_dir / f"cv_{arm}_summary.csv"
 
     manifest = dataset.load_split_manifest()
     trainval = manifest[manifest.split.isin(["train", "val"])].reset_index(drop=True)
@@ -101,7 +104,9 @@ def main():
     t0 = time.time()
 
     for fold, (tr_idx, va_idx) in enumerate(skf.split(trainval.image_id, trainval.label), 1):
-        result_path = utils.JSON_DIR / f"cv_{arm}_fold{fold}_result.json"
+        json_dir = utils.JSON_B3_BASELINE if attention == "none" else utils.JSON_ATTENTION
+        json_dir.mkdir(parents=True, exist_ok=True)
+        result_path = json_dir / f"cv_{arm}_fold{fold}_result.json"
         ckpt = utils.CHECKPOINTS_DIR / f"cv_{arm}_fold{fold}.pt"
 
         if result_path.exists():
@@ -123,7 +128,7 @@ def main():
                 backbone=backbone, attention=attention, image_size=IMAGE_SIZE,
                 drop_rate=DROP, label_smoothing=LS, ft_lr=FT_LR,
                 batch_size=BATCH, num_workers=WORKERS,
-                history_csv=utils.CSV_DIR / f"cv_{arm}_fold{fold}_history.csv",
+                history_csv=utils.CSV_HISTORY / f"cv_{arm}_fold{fold}_history.csv",
                 meta_extra={"fold": fold})
             val_m = best_meta["val_metrics"]
 

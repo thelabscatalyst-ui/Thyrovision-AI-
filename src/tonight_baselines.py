@@ -25,7 +25,7 @@ from .metrics import compute_metrics, format_metrics
 from .train import fit_two_phase
 
 METRIC_KEYS = ["accuracy", "sensitivity", "specificity", "precision", "f1", "auc"]
-SUMMARY_CSV = utils.CSV_DIR / "tonight_summary.csv"
+SUMMARY_CSV = utils.CSV_TONIGHT / "tonight_summary.csv"
 
 # Recipe A (ResNet) and Recipe B (EfficientNet-B3, 3-config mini-search).
 CONFIGS = [
@@ -43,7 +43,7 @@ CONFIGS = [
 
 
 def run_cfg(cfg, device, log) -> dict:
-    result_path = utils.JSON_DIR / f"tonight_{cfg['name']}_result.json"
+    result_path = utils.JSON_TONIGHT / f"tonight_{cfg['name']}_result.json"
     ckpt = utils.CHECKPOINTS_DIR / f"tonight_{cfg['name']}.pt"
     if result_path.exists():
         r = json.loads(result_path.read_text())
@@ -63,8 +63,8 @@ def run_cfg(cfg, device, log) -> dict:
         tr, va, device, ckpt, log, tag=cfg["name"], backbone=cfg["backbone"],
         image_size=cfg["image_size"], drop_rate=cfg["drop"], label_smoothing=cfg["ls"],
         ft_lr=cfg["ft_lr"], batch_size=cfg["batch"], num_workers=cfg["workers"],
-        history_csv=utils.CSV_DIR / f"tonight_{cfg['name']}_history.csv",
-        curve_png=utils.FIGURES_DIR / f"tonight_{cfg['name']}_curve.png")
+        history_csv=utils.CSV_HISTORY / f"tonight_{cfg['name']}_history.csv",
+        curve_png=utils.FIG_ARCHIVE / f"tonight_{cfg['name']}_curve.png")
 
     model, _ = model_mod.load_checkpoint(ckpt, device)
     y, p = _infer(model, DataLoader(te, batch_size=cfg["batch"], shuffle=False,

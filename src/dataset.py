@@ -78,7 +78,7 @@ def load_clean_manifest() -> pd.DataFrame:
     Built by near_duplicates.build_clean_manifest(); has near-duplicate leakers
     flagged keep=False and a `group` column for group-aware CV folds.
     """
-    clean = utils.CSV_DIR / "tn5000_split_clean.csv"
+    clean = utils.SPLIT_CLEAN_CSV
     if not clean.exists():
         raise FileNotFoundError(
             f"{clean} missing — run near_duplicates.build_clean_manifest() first")

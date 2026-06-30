@@ -7,7 +7,7 @@ EfficientNet-B3 baseline. Research internship, NIT Delhi (mentor: Dr. Gunjan).
 Hard deadline: mid-July 2026.
 
 Full background — the problem statement, why this scope, the gaps vs. the closest
-published paper — lives in `Research/Extras/Project_Context.md`. Read it in full once now,
+published paper — lives in `research/Extras/Project_Context.md`. Read it in full once now,
 and again whenever you need to justify a design decision. It does not need to reload
 every message.
 
@@ -36,13 +36,13 @@ module LATER.**
   **Screen result (single split, TEST AUC):** none **0.933** ≈ se 0.932 > cbam 0.918 >
   cpca 0.910 → **external attention did NOT improve over the plain B3 baseline** (SE ties,
   CBAM/CPCA slightly worse). A clean negative result that fills the gap. Next: 5-fold CV the
-  SE arm to error-bar it vs the baseline CV. Source: `outputs/csv/phase2_attention_summary.csv`.
+  SE arm to error-bar it vs the baseline CV. Source: `outputs/csv/Attention/phase2_attention_summary.csv`.
 - **Phase 3 (LATER) — detection:** YOLOv8 + **MobileNetV4** backbone (+ attention) to
   localize nodules / cut compute. Scope only after Phase 2 — **do not build YOLO
   machinery yet.**
 
-Plan: `Research/Phase2_Plan.md`. Journey + numbers:
-`Research/Baseline_Journey_And_Results.md`, `Research/Finding_Diary.md`.
+Plan: `research/Phase2_Plan.md`. Journey + numbers:
+`research/Baseline_Journey_And_Results.md`, `research/Finding_Diary.md`.
 
 ## Non-negotiable rules
 
@@ -60,7 +60,7 @@ Plan: `Research/Phase2_Plan.md`. Journey + numbers:
    a confusion matrix together.
 5. **Augmentation applies to the training split only.**
 6. **At the end of each session**, write a session brief using
-   `Research/Extras/Session_Template.md` and save it under `Research/Sessions/`.
+   `research/Extras/Session_Template.md` and save it under `research/Sessions/`.
 
 ## Dataset roles
 
@@ -71,8 +71,8 @@ Plan: `Research/Phase2_Plan.md`. Journey + numbers:
 
 ## Project structure
 `Data/` (never in git — large + restricted research data) · `src/` (code) ·
-`outputs/checkpoints,figures,logs/` · `Research/` (this context + session history).
-Full map in `Research/Extras/Project_Context.md` §5.
+`outputs/checkpoints,figures,logs/` · `research/` (this context + session history).
+Full map in `research/Extras/Project_Context.md` §5.
 
 ## Sanity floor
 A plain ResNet-50 on TN5000 should land near 85% accuracy (literature baseline).
@@ -93,7 +93,7 @@ Python 3.11 venv at `.venv/`. See memory: long-jobs-laptop-sleep.
 ## What we did (step by step)
 1. Built the TN5000 pipeline: load → clean burned-in artifacts (scanner text top-left,
    calipers, bottom-right marker) → official 70/10/20 split frozen to
-   `outputs/csv/tn5000_split.csv`.
+   `outputs/csv/Splits/tn5000_split.csv`.
 2. First baseline (ResNet-50, simple recipe) + 5-fold CV → validated the pipeline.
 3. Found duplicate-image leakage in TN5000 (data-quality finding).
 4. Ran a fair backbone bake-off (ResNet-18/50, EfficientNet-B0/B3, one recipe) →
@@ -172,21 +172,25 @@ attention is our honest lever toward it.
 ## Detailed docs
 | Topic | File |
 |-------|------|
-| Step-by-step journey + ⭐ findings | `Research/Finding_Diary.md` |
-| Full baseline journey + all tables | `Research/Baseline_Journey_And_Results.md` |
-| Duplicate-leakage finding (+ reproduce) | `Research/TN5000_Duplicate_Finding.md` |
-| Named limitations (ours + theirs) | `Research/Limitations.md` |
-| Paper-log deep dive (papers 2/4/6) | `Research/Paper_Analysis_2_4_6.md` |
-| Backbone bake-off | `Research/Backbone_Bakeoff_Findings.md` |
-| Committed B3 confusion matrix | `outputs/figures/FINAL_b3_confusion_matrix.png` |
-| All tonight runs' numbers / probabilities | `outputs/csv/tonight_summary.csv`, `outputs/tonight_probs.npz` |
-| Baseline 5-fold CV results | `outputs/csv/cv_efficientnet_b3_none_{results,summary}.csv` |
+| Step-by-step journey + ⭐ findings | `research/Finding_Diary.md` |
+| Full baseline journey + all tables | `research/Baseline_Journey_And_Results.md` |
+| Duplicate-leakage finding (+ reproduce) | `research/TN5000_Duplicate_Finding.md` |
+| Named limitations (ours + theirs) | `research/Limitations.md` |
+| Paper-log deep dive (papers 2/4/6) | `research/Paper_Analysis_2_4_6.md` |
+| Backbone bake-off | `research/Backbone_Bakeoff_Findings.md` |
+| Committed B3 CV figures | `outputs/figures/EfficientNet_B3_Baseline/` (cv_confusion_0.50, cv_confusion_sens90, cv_roc) |
+| Attention comparison figure | `outputs/figures/Attention/attention_auc_comparison.png` |
+| figures layout | grouped like csv/: `Data_Quality/ EfficientNet_B3_Baseline/ Attention/ Bakeoff/ Resnet_50/ Archive/` |
+| All tonight runs' numbers / probabilities | `outputs/csv/Tonight/` (tonight_summary.csv, tonight_probs.npz) |
+| Baseline 5-fold CV results | `outputs/csv/EfficientNet_B3_Baseline/cv_efficientnet_b3_none_{results,summary}.csv` |
+| SE attention 5-fold CV results | `outputs/csv/Attention/cv_efficientnet_b3_se_{results,summary}.csv` |
+| csv layout | grouped: `Splits/ Data_Quality/ EfficientNet_B3_Baseline/ Attention/ Bakeoff/ Tonight/ Resnet_50/ Archive/` |
 
 ## Open threads
 1. **Phase 2 (NOW): attention comparison** — single-split screen DONE: none 0.933 ≈ se 0.932
    > cbam 0.918 > cpca 0.910 (test AUC) → **external attention doesn't beat the B3 baseline.**
    **SE 5-fold CV pending** (`src.cv_train --attention se`) to error-bar the top contender,
-   then write the Phase-2 verdict. Results: `outputs/csv/phase2_attention_summary.csv`.
+   then write the Phase-2 verdict. Results: `outputs/csv/Attention/phase2_attention_summary.csv`.
 2. ✅ **DONE — EfficientNet-B3 5-fold CV:** TEST AUC 0.920 ± 0.005, acc 0.868 ± 0.013
    (`src.cv_train --attention none`). Error-barred baseline locked. Next: same CV on the
    winning attention finalist(s) after the single-split screen.
@@ -195,7 +199,7 @@ attention is our honest lever toward it.
    don't build YOLO machinery yet.
 4. **Open data question (user-flagged):** the duplicate finding's "adjacent-photo" pattern
    — are the byte-identical duplicates consecutive frames / adjacent image-IDs? Investigate
-   before any strong novelty claim. See `Research/TN5000_Duplicate_Finding.md` (§Finding).
+   before any strong novelty claim. See `research/TN5000_Duplicate_Finding.md` (§Finding).
 5. **Future work — accuracy-boost roadmap (POST-completion; user deferred until pillars done):**
    to raise acc+AUC *together* (real model gains, not threshold tricks): Tier 1 = TTA / EMA /
    MixUp (cheap, honest); then ensemble; then a **GAN** (G-RAN-style synthetic benigns) as the

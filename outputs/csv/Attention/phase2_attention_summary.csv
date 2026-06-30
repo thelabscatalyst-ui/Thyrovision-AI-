@@ -1,0 +1,5 @@
+attention,val_auc,train_min,test_accuracy,test_sensitivity,test_specificity,test_precision,test_f1,test_auc
+none,0.9487,78.9,0.879,0.8906,0.8476,0.9408,0.915,0.933
+se,0.9388,80.8,0.887,0.9138,0.8141,0.9304,0.922,0.9317
+cbam,0.9248,56.5,0.864,0.87,0.8476,0.9394,0.9034,0.9184
+cpca,0.9498,60.8,0.878,0.9029,0.8104,0.9283,0.9154,0.9099

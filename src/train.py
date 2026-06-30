@@ -44,8 +44,8 @@ WEIGHT_DECAY = 1e-4
 NUM_WORKERS = 4
 IMAGE_SIZE = 224
 CKPT_PATH = utils.CHECKPOINTS_DIR / "resnet50_baseline.pt"
-HISTORY_CSV = utils.CSV_DIR / "baseline_history.csv"
-CURVE_PNG = utils.FIGURES_DIR / "baseline_training_curve.png"
+HISTORY_CSV = utils.CSV_HISTORY / "baseline_history.csv"
+CURVE_PNG = utils.FIG_ARCHIVE / "baseline_training_curve.png"
 
 
 def _run_epoch(model, loader, device, criterion, optimizer=None):

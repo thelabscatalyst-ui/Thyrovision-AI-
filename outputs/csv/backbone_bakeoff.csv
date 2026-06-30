@@ -1,5 +1,0 @@
-backbone,img,params_M,train_min,best_epoch,test_accuracy,test_sensitivity,test_specificity,test_precision,test_f1,test_auc
-resnet50,224,23.5,23.9,13,0.868,0.8933,0.7993,0.9236,0.9082,0.9261
-efficientnet_b3,300,10.7,60.4,16,0.848,0.8824,0.7546,0.9072,0.8946,0.9015
-resnet18,224,11.2,6.9,9,0.827,0.8304,0.8178,0.9253,0.8753,0.8961
-efficientnet_b0,224,4.0,16.0,18,0.839,0.9179,0.6245,0.8692,0.8929,0.8795

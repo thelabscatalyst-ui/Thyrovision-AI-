@@ -25,11 +25,11 @@ from .metrics import compute_metrics, format_metrics
 from .train import fit
 
 METRIC_KEYS = ["accuracy", "sensitivity", "specificity", "precision", "f1", "auc"]
-BAKEOFF_CSV = utils.CSV_DIR / "backbone_bakeoff.csv"
+BAKEOFF_CSV = utils.CSV_BAKEOFF / "backbone_bakeoff.csv"
 
 
 def run_one(name: str, image_size: int, device, log) -> dict:
-    result_path = utils.JSON_DIR / f"bakeoff_{name}_result.json"
+    result_path = utils.JSON_BAKEOFF / f"bakeoff_{name}_result.json"
     ckpt = utils.CHECKPOINTS_DIR / f"bakeoff_{name}.pt"
     if result_path.exists():
         r = json.loads(result_path.read_text())
@@ -50,8 +50,8 @@ def run_one(name: str, image_size: int, device, log) -> dict:
     best_meta, best_epoch, elapsed, _ = fit(
         tr, va, device, ckpt, log, tag=name, backbone=name, image_size=image_size,
         batch_size=batch, num_workers=workers,
-        history_csv=utils.CSV_DIR / f"bakeoff_{name}_history.csv",
-        curve_png=utils.FIGURES_DIR / f"bakeoff_{name}_curve.png")
+        history_csv=utils.CSV_HISTORY / f"bakeoff_{name}_history.csv",
+        curve_png=utils.FIG_ARCHIVE / f"bakeoff_{name}_curve.png")
 
     model, _ = model_mod.load_checkpoint(ckpt, device)
     n_params = sum(p.numel() for p in model.parameters())

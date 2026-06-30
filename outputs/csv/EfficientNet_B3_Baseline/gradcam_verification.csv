@@ -1,0 +1,6 @@
+group,pointing_hit_rate,pointing_hit_rate_sd,energy_in_box_mean,energy_in_box_mean_sd,corner_energy_mean,corner_energy_mean_sd,faith_drop_mean,faith_drop_mean_sd
+all,0.6714,0.0198,0.3484,0.0218,0.0312,0.0102,0.5089,0.0121
+correct,0.7247,0.0144,0.3738,0.0246,0.0313,0.0113,0.5375,0.0133
+incorrect,0.3257,0.0639,0.184,0.0296,0.0305,0.0094,0.3234,0.0372
+malignant,0.7625,0.0192,0.3992,0.0288,0.0318,0.0108,0.6139,0.0227
+benign,0.4238,0.0426,0.2103,0.019,0.0296,0.0122,0.2235,0.0424

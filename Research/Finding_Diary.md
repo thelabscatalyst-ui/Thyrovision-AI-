@@ -97,6 +97,39 @@ in the paper/report.** Most-recent context lives in the linked detailed docs.*
 
 ---
 
+## Pillar — Explainability (verified Grad-CAM). The check the paper skipped.
+
+### Step 9 — Quantitative Grad-CAM verification vs the nodule boxes
+- Grad-CAM heatmaps are computed **from the committed B3 alone** (its activations +
+  gradients); the TN5000 nodule **bounding box is the answer key, applied only afterward**
+  to grade localization. 5-fold CV (each fold's model on the sealed 1,000-image test set).
+- ⭐ **The model looks at the nodule, ~10× better than chance:** pointing-game hit
+  **0.671 ± 0.020** (all) / **0.763 ± 0.019** (malignant), vs the box covering only ~6.6%
+  of the image. Energy-in-box 0.35 (≈5× the box area) → heat concentrates on the lesion.
+- ⭐ **It does NOT use burned-in artifacts:** corner-energy **0.031 ± 0.010** (~3%) →
+  independently **corroborates the caliper audit** (L2) — the model isn't reading scanner
+  text/markers. Fulfils the Phase-3 forward-link in `research/Limitations.md` L2.
+- ⭐ **The heatmap is faithful:** masking the hot region drops the **predicted class's**
+  probability by **0.509 ± 0.012** overall (0.614 malignant, 0.224 benign — both positive).
+  The paper showed heatmaps but never tested this.
+- ⭐ **Best-method chosen empirically (not assumed):** compared Grad-CAM / Grad-CAM++ /
+  HiRes-CAM against the boxes — plain **Grad-CAM localizes best** (malignant pointing 0.76 vs
+  Grad-CAM++ 0.49) **and equals HiRes-CAM exactly**, which is *provably faithful* for a
+  GAP+linear head — so our Grad-CAM is faithful by construction here. (`--method compare`.)
+- ⭐ **Explainability tracks correctness:** correct predictions point at the nodule
+  (0.725) and are faithful (0.538); incorrect ones point elsewhere (0.326) and are far less
+  faithful (0.323). The metric distinguishes good from bad decisions.
+- **Honest caveat:** benign localization is weaker (pointing 0.42, faith-drop 0.22 vs
+  malignant 0.76 / 0.61). Interpretable, not a bug — a "benign" call is about the diffuse
+  *absence* of malignant features, so its evidence is less nodule-focused. The
+  clinically-relevant malignant localization is the strong, headline one.
+- Code: `src/gradcam.py` + `src/explainability_eval.py`. Figures:
+  `outputs/figures/EfficientNet_B3_Baseline/gradcam_examples.png`, `gradcam_vs_box.png`
+  (top = nodule box, bottom = box-free model heatmap). Numbers:
+  `outputs/csv/EfficientNet_B3_Baseline/gradcam_verification.csv`.
+
+---
+
 ## Key findings about the competitor paper (Bahmane 2025, *Medicina*) — all ⭐ citable
 - ⭐ Reports **plain EfficientNet-B3 at two different accuracies** (87.1% and 89.7%);
   training time as **both 42 and 12 min**; train/val/test split **stated two ways**

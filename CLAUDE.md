@@ -20,7 +20,7 @@ GPU/CUDA basics, etc.) in plain English as you introduce them, rather than
 assuming familiarity. Plan before you build: for any new stage, lay out the plan
 and the folder/file changes, and wait for me to confirm before writing code.
 
-## Current phase: Phase 2 — Attention comparison (Leg A)
+## Current phase: Pillars — Attention ✅ + Explainability ✅ done; TI-RADS next
 **Phase 1 baseline = DONE & signed off.** Committed backbone: **EfficientNet-B3**
 (two-phase fine-tune, 300px). **5-fold CV: TEST AUC 0.920 ± 0.005, acc 0.868 ± 0.013,
 sens 0.879, spec 0.839** — matches the paper's plain B3 on accuracy, beats its AUC (0.89),
@@ -154,7 +154,15 @@ attention is our honest lever toward it.
   TEST AUC): none 0.933 / SE 0.932 / CBAM 0.918 / CPCA 0.910 — baseline best, SE ties,
   CBAM/CPCA worse. Consistent with B3's native SE + spatial attention being wasted after
   global pooling on a 10×10 map (CBAM/CPCA's win in Paper 2 was a *detection* task). A clean
-  negative result filling the paper's "SE never compared" gap; CV of SE pending to error-bar it.
+  negative result filling the paper's "SE never compared" gap. **CV-confirmed: SE 0.913 ±
+  0.007 < baseline 0.920 ± 0.005** — attention does not help, error-barred.
+- ⭐ **Verified Grad-CAM (the check the paper skipped):** the committed B3 looks at the nodule
+  — pointing-game **0.67 ± 0.02** (0.76 malignant), ~10× the box's 6.6% area; **ignores
+  burned-in artifacts** (corner-energy 3.1% ± 1.0%, independently corroborating the caliper
+  audit); is **faithful** (masking the hot region drops P(mal) 0.57 ± 0.03 on malignant); and
+  the metrics **track correctness** (correct 0.73 pointing / 0.46 drop vs incorrect 0.33 / 0.07).
+  Heatmaps computed from the model alone; box used only as the answer key. Benign localization
+  weaker (interpretable). Code: `src.explainability_eval`.
 
 ## Key decisions & rationale
 - **Backbone = EfficientNet-B3:** mentor-confirmed + paper-aligned (their backbone) +
@@ -180,6 +188,7 @@ attention is our honest lever toward it.
 | Backbone bake-off | `research/Backbone_Bakeoff_Findings.md` |
 | Committed B3 CV figures | `outputs/figures/EfficientNet_B3_Baseline/` (cv_confusion_0.50, cv_confusion_sens90, cv_roc) |
 | Attention comparison figure | `outputs/figures/Attention/attention_auc_comparison.png` |
+| Grad-CAM verification (numbers + figures) | `outputs/csv/EfficientNet_B3_Baseline/gradcam_verification.csv`; `outputs/figures/EfficientNet_B3_Baseline/gradcam_{examples,vs_box}.png` |
 | figures layout | grouped like csv/: `Data_Quality/ EfficientNet_B3_Baseline/ Attention/ Bakeoff/ Resnet_50/ Archive/` |
 | All tonight runs' numbers / probabilities | `outputs/csv/Tonight/` (tonight_summary.csv, tonight_probs.npz) |
 | Baseline 5-fold CV results | `outputs/csv/EfficientNet_B3_Baseline/cv_efficientnet_b3_none_{results,summary}.csv` |
@@ -187,10 +196,11 @@ attention is our honest lever toward it.
 | csv layout | grouped: `Splits/ Data_Quality/ EfficientNet_B3_Baseline/ Attention/ Bakeoff/ Tonight/ Resnet_50/ Archive/` |
 
 ## Open threads
-1. **Phase 2 (NOW): attention comparison** — single-split screen DONE: none 0.933 ≈ se 0.932
-   > cbam 0.918 > cpca 0.910 (test AUC) → **external attention doesn't beat the B3 baseline.**
-   **SE 5-fold CV pending** (`src.cv_train --attention se`) to error-bar the top contender,
-   then write the Phase-2 verdict. Results: `outputs/csv/Attention/phase2_attention_summary.csv`.
+1. ✅ **DONE — Phase 2 attention comparison (Leg A):** screen none 0.933 ≈ se 0.932 > cbam
+   0.918 > cpca 0.910; **5-fold CV confirms SE 0.913 ± 0.007 < baseline 0.920 ± 0.005** →
+   external attention does not help (error-barred). Results: `outputs/csv/Attention/`.
+   ✅ **DONE — Explainability pillar (verified Grad-CAM):** model looks at the nodule (~10×
+   chance), ignores artifacts (corner 3%), faithful (mask-drop 0.57 malignant). `src.explainability_eval`.
 2. ✅ **DONE — EfficientNet-B3 5-fold CV:** TEST AUC 0.920 ± 0.005, acc 0.868 ± 0.013
    (`src.cv_train --attention none`). Error-barred baseline locked. Next: same CV on the
    winning attention finalist(s) after the single-split screen.

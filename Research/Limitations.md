@@ -44,12 +44,14 @@ Re-splitting (forfeits official-benchmark comparability) and caliper masking
 risk they'd address. Artifacts: `outputs/caliper_audit.csv`,
 `outputs/caliper_audit_summary.csv`, `outputs/figures/stageA_caliper_detection.png`.
 
-**Forward link (Phase 3 — a SECOND, independent check):** the Grad-CAM review
-must explicitly check whether high-confidence or misclassified cases show
-attention landing on caliper/corner regions rather than the nodule. This covers a
-different failure mode than the audit: the **audit** shows the *data* offers no
-caliper shortcut; the **Phase-3 check** confirms the *model* didn't construct one
-anyway. See [[caliper-audit]].
+**Forward link — ✅ NOW CONFIRMED (Grad-CAM verification):** the explainability pillar
+quantified how much heatmap energy lands in the burned-in-artifact corners: **3.1% ± 1.0%
+(5-fold CV)** — the model essentially ignores the scanner text/markers and looks at the
+nodule (pointing-game 0.76 on malignant, ~10× the box's area). This **independently
+corroborates the audit by a different method**: the **audit** showed the *data* offers no
+caliper/corner shortcut; the **Grad-CAM check** confirms the *model* didn't construct one
+anyway — both point the same way. Code: `src/explainability_eval.py`; see Finding_Diary
+Step 9 and [[caliper-audit]].
 
 ## L3. TN5000 is malignant-skewed vs real-world prevalence
 TN5000 is ~71% malignant (3,574 / 1,426), the opposite of the ~5–15% malignant
